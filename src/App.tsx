@@ -174,14 +174,6 @@ function App() {
             </div>
           )}
 
-          {/* Info Alert */}
-          <Alert className="py-2.5 px-3">
-            <Info className="h-4 w-4" />
-            <AlertDescription className="text-xs leading-relaxed">
-              Имена слоев в Figma должны совпадать с полями в данных
-            </AlertDescription>
-          </Alert>
-
           {/* Messages */}
           {message.type === 'error' && (
             <Alert variant="destructive" className="py-2.5 px-3">
