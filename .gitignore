@@ -5,3 +5,7 @@ dist/
 .env
 *.zip
 
+# React build artifacts
+.vite/
+*.tsbuildinfo
+
