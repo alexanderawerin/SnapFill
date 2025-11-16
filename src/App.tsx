@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, X, Info, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, AlertCircle } from 'lucide-react';
 
 interface DataItem {
   [key: string]: any;
@@ -14,7 +14,6 @@ function App() {
   const [isArray, setIsArray] = useState(false);
   const [fileName, setFileName] = useState<string>('');
   const [message, setMessage] = useState<{ type: 'success' | 'error' | null; text: string }>({ type: null, text: '' });
-  const [selectedFramesCount, setSelectedFramesCount] = useState<number>(0);
 
   // Detect Figma theme
   useEffect(() => {
@@ -32,18 +31,6 @@ function App() {
     mediaQuery.addEventListener('change', checkTheme);
     
     return () => mediaQuery.removeEventListener('change', checkTheme);
-  }, []);
-
-  // Get selection info on mount and periodically
-  useEffect(() => {
-    const getSelectionInfo = () => {
-      parent.postMessage({ pluginMessage: { type: 'get-selection-info' } }, '*');
-    };
-    
-    getSelectionInfo();
-    const interval = setInterval(getSelectionInfo, 500);
-    
-    return () => clearInterval(interval);
   }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,7 +61,8 @@ function App() {
         setIsArray(true);
       }
     } catch (error) {
-      setMessage({ type: 'error', text: `Ошибка чтения файла: ${error.message}` });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setMessage({ type: 'error', text: `Ошибка чтения файла: ${errorMessage}` });
     }
   };
 
@@ -84,11 +72,35 @@ function App() {
       throw new Error('CSV файл должен содержать заголовки и хотя бы одну строку данных');
     }
 
-    const headers = lines[0].split(',').map(h => h.trim());
+    // Simple CSV parser that handles quoted values with commas
+    const parseLine = (line: string): string[] => {
+      const result: string[] = [];
+      let current = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    };
+
+    const headers = parseLine(lines[0]);
     const results: DataItem[] = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
+      if (!lines[i].trim()) continue; // Skip empty lines
+      
+      const values = parseLine(lines[i]);
       const row: DataItem = {};
       headers.forEach((header, index) => {
         row[header] = values[index] || '';
@@ -111,10 +123,6 @@ function App() {
     }
   };
 
-  const handleCancel = () => {
-    parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
-  };
-
   useEffect(() => {
     window.onmessage = (event) => {
       const msg = event.data.pluginMessage;
@@ -122,86 +130,106 @@ function App() {
         setMessage({ type: 'error', text: msg.message });
       } else if (msg.type === 'success') {
         setMessage({ type: 'success', text: msg.message });
-      } else if (msg.type === 'selection-info') {
-        setSelectedFramesCount(msg.count);
       }
     };
   }, []);
 
   return (
-    <div className="h-screen w-full bg-background p-4 flex flex-col">
+    <div className="h-screen w-full bg-background flex flex-col">
       <Card className="flex-1 flex flex-col shadow-none border-0">
-        <CardHeader className="pb-3 pt-3 px-4">
-          <CardTitle className="text-lg">SnapFill</CardTitle>
-          <CardDescription className="text-sm">Заполните макет данными из файла</CardDescription>
-        </CardHeader>
-
-        <CardContent className="flex-1 space-y-3 overflow-y-auto px-4 pb-3">
-          {/* File Upload */}
-          <div>
-            <label htmlFor="file-upload" className="cursor-pointer block">
-              <Button variant="outline" className="w-full h-10" asChild>
-                <span>
-                  <Upload className="w-4 h-4 mr-2" />
-                  {fileName || 'Выберите CSV или JSON файл'}
-                </span>
-              </Button>
+        <CardContent className="flex-1 flex flex-col overflow-y-auto p-0">
+          {!fileName ? (
+            // Empty state - instruction screen
+            <label htmlFor="file-upload-empty" className="cursor-pointer flex-1 flex flex-col p-4">
+              <div className="flex-1 border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center text-center hover:border-primary/50 transition-colors">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-4">
+                  <Upload className="w-8 h-8 text-white" />
+                </div>
+                
+                <h3 className="text-base font-semibold mb-2">
+                  Загрузите файл с данными
+                </h3>
+                
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Выберите <span className="font-medium text-foreground">JSON</span> или <span className="font-medium text-foreground">CSV</span> файл для заполнения макетов
+                </p>
+              </div>
               <input
-                id="file-upload"
+                id="file-upload-empty"
                 type="file"
                 accept=".csv,.json"
                 className="hidden"
                 onChange={handleFileUpload}
               />
             </label>
-          </div>
-
-          {/* Data Preview */}
-          {currentData && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Превью данных</label>
-                {isArray && allData && (
-                  <span className="text-xs font-semibold text-primary px-2 py-0.5 bg-primary/10 rounded">
-                    {allData.length} записей
-                  </span>
-                )}
-              </div>
-              <div className="rounded-md border bg-muted/50 p-3 max-h-64 overflow-y-auto">
-                {Object.keys(currentData).slice(0, 8).map((key) => (
-                  <div key={key} className="text-xs py-1 flex gap-2">
-                    <strong className="font-semibold min-w-20 shrink-0">{key}:</strong>
-                    <span className="text-muted-foreground truncate">
-                      {String(currentData[key])}
+          ) : (
+            // File selected - data preview and controls
+            <div className="space-y-3 flex-1 flex flex-col p-4">
+              {/* File Upload */}
+              <div>
+                <label htmlFor="file-upload" className="cursor-pointer block">
+                  <Button variant="outline" className="w-full h-10" asChild>
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      {fileName}
                     </span>
-                  </div>
-                ))}
-                {Object.keys(currentData).length > 8 && (
-                  <div className="text-xs text-muted-foreground py-1 italic">
-                    + еще {Object.keys(currentData).length - 8} полей
-                  </div>
-                )}
+                  </Button>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    accept=".csv,.json"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                </label>
               </div>
-            </div>
-          )}
 
-          {/* Messages */}
-          {message.type === 'error' && (
-            <Alert variant="destructive" className="py-2.5 px-3">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs">{message.text}</AlertDescription>
-            </Alert>
+              {/* Data Preview */}
+              {currentData && (
+                <div className="space-y-2 flex-1 flex flex-col min-h-0">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Превью данных</label>
+                    {isArray && allData && (
+                      <span className="text-xs font-semibold text-primary px-2 py-0.5 bg-primary/10 rounded">
+                        {allData.length} записей
+                      </span>
+                    )}
+                  </div>
+                  <div className="rounded-md border bg-muted/50 p-3 flex-1 overflow-y-auto min-h-0">
+                    {Object.keys(currentData).map((key) => (
+                      <div key={key} className="text-xs py-1 flex gap-2">
+                        <strong className="font-semibold min-w-20 shrink-0">{key}:</strong>
+                        <span className="text-muted-foreground truncate">
+                          {String(currentData[key])}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Messages */}
+              {message.type === 'error' && (
+                <Alert variant="destructive" className="py-2.5 px-3">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">{message.text}</AlertDescription>
+                </Alert>
+              )}
+            </div>
           )}
         </CardContent>
 
-        <CardFooter className="flex gap-2 pt-3 pb-3 border-t px-4">
-          <Button onClick={handleFill} disabled={!currentData} className="flex-1">
-            Заполнить
-          </Button>
-          <Button variant="outline" onClick={handleCancel} className="px-3">
-            <X className="w-4 h-4" />
-          </Button>
-        </CardFooter>
+        {fileName && (
+          <CardFooter className="pt-3 pb-3 border-t px-4">
+            <Button 
+              onClick={handleFill} 
+              disabled={!currentData} 
+              className="w-full bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+            >
+              Заполнить
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );

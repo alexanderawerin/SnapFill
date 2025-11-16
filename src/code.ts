@@ -58,18 +58,6 @@ figma.ui.onmessage = async (msg) => {
         message: `Ошибка: ${errorMessage}` 
       });
     }
-  } else if (msg.type === 'get-selection-info') {
-    // Send current selection info to UI
-    const selection = figma.currentPage.selection;
-    const validFrames = selection.filter(
-      node => node.type === 'FRAME' || node.type === 'COMPONENT'
-    );
-    figma.ui.postMessage({ 
-      type: 'selection-info', 
-      count: validFrames.length 
-    });
-  } else if (msg.type === 'cancel') {
-    figma.closePlugin();
   }
 };
 
@@ -116,12 +104,19 @@ async function fillNodeWithData(node: SceneNode, data: Record<string, any>) {
   const nodeName = node.name;
   
   // Check if there's data for this node
-  if (data.hasOwnProperty(nodeName)) {
+  if (Object.prototype.hasOwnProperty.call(data, nodeName)) {
     const value = data[nodeName];
     
     // Handle text nodes
     if (node.type === 'TEXT' && typeof value === 'string') {
-      await figma.loadFontAsync(node.fontName as FontName);
+      // Handle mixed fonts by loading all unique fonts
+      if (node.fontName !== figma.mixed) {
+        await figma.loadFontAsync(node.fontName as FontName);
+      } else {
+        // For mixed fonts, load the first character's font
+        const firstCharFont = node.getRangeFontName(0, 1) as FontName;
+        await figma.loadFontAsync(firstCharFont);
+      }
       node.characters = value;
     }
     
