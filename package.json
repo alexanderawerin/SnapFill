@@ -1,6 +1,6 @@
 {
   "name": "snapfill",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "Figma plugin to populate designs with data from CSV/JSON and REST APIs",
   "scripts": {
     "build": "npm run build:plugin && npm run build:ui",

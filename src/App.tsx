@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Shuffle, X, Info, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, X, Info, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface DataItem {
   [key: string]: any;
@@ -14,6 +14,7 @@ function App() {
   const [isArray, setIsArray] = useState(false);
   const [fileName, setFileName] = useState<string>('');
   const [message, setMessage] = useState<{ type: 'success' | 'error' | null; text: string }>({ type: null, text: '' });
+  const [selectedFramesCount, setSelectedFramesCount] = useState<number>(0);
 
   // Detect Figma theme
   useEffect(() => {
@@ -31,6 +32,18 @@ function App() {
     mediaQuery.addEventListener('change', checkTheme);
     
     return () => mediaQuery.removeEventListener('change', checkTheme);
+  }, []);
+
+  // Get selection info on mount and periodically
+  useEffect(() => {
+    const getSelectionInfo = () => {
+      parent.postMessage({ pluginMessage: { type: 'get-selection-info' } }, '*');
+    };
+    
+    getSelectionInfo();
+    const interval = setInterval(getSelectionInfo, 500);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,16 +101,13 @@ function App() {
 
   const handleFill = () => {
     if (currentData) {
-      parent.postMessage({ pluginMessage: { type: 'fill-data', data: currentData } }, '*');
-    }
-  };
-
-  const handleRandom = () => {
-    if (isArray && allData && allData.length > 0) {
-      const randomIndex = Math.floor(Math.random() * allData.length);
-      const randomData = allData[randomIndex];
-      setCurrentData(randomData);
-      parent.postMessage({ pluginMessage: { type: 'fill-data', data: randomData } }, '*');
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: 'fill-data', 
+          data: currentData,
+          allData: allData // Send all data for random selection
+        } 
+      }, '*');
     }
   };
 
@@ -112,6 +122,8 @@ function App() {
         setMessage({ type: 'error', text: msg.message });
       } else if (msg.type === 'success') {
         setMessage({ type: 'success', text: msg.message });
+      } else if (msg.type === 'selection-info') {
+        setSelectedFramesCount(msg.count);
       }
     };
   }, []);
@@ -126,8 +138,7 @@ function App() {
 
         <CardContent className="flex-1 space-y-3 overflow-y-auto px-4 pb-3">
           {/* File Upload */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Файл с данными</label>
+          <div>
             <label htmlFor="file-upload" className="cursor-pointer block">
               <Button variant="outline" className="w-full h-10" asChild>
                 <span>
@@ -156,8 +167,8 @@ function App() {
                   </span>
                 )}
               </div>
-              <div className="rounded-md border bg-muted/50 p-3 max-h-32 overflow-y-auto">
-                {Object.keys(currentData).slice(0, 4).map((key) => (
+              <div className="rounded-md border bg-muted/50 p-3 max-h-64 overflow-y-auto">
+                {Object.keys(currentData).slice(0, 8).map((key) => (
                   <div key={key} className="text-xs py-1 flex gap-2">
                     <strong className="font-semibold min-w-20 shrink-0">{key}:</strong>
                     <span className="text-muted-foreground truncate">
@@ -165,9 +176,9 @@ function App() {
                     </span>
                   </div>
                 ))}
-                {Object.keys(currentData).length > 4 && (
+                {Object.keys(currentData).length > 8 && (
                   <div className="text-xs text-muted-foreground py-1 italic">
-                    + еще {Object.keys(currentData).length - 4} полей
+                    + еще {Object.keys(currentData).length - 8} полей
                   </div>
                 )}
               </div>
@@ -181,26 +192,9 @@ function App() {
               <AlertDescription className="text-xs">{message.text}</AlertDescription>
             </Alert>
           )}
-          {message.type === 'success' && (
-            <Alert variant="success" className="py-2.5 px-3">
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription className="text-xs">{message.text}</AlertDescription>
-            </Alert>
-          )}
         </CardContent>
 
         <CardFooter className="flex gap-2 pt-3 pb-3 border-t px-4">
-          {isArray && (
-            <Button
-              variant="gradient"
-              onClick={handleRandom}
-              disabled={!currentData}
-              className="flex-1"
-            >
-              <Shuffle className="w-4 h-4 mr-2" />
-              Случайный
-            </Button>
-          )}
           <Button onClick={handleFill} disabled={!currentData} className="flex-1">
             Заполнить
           </Button>

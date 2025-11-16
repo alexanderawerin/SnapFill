@@ -20,22 +20,37 @@ figma.ui.onmessage = async (msg) => {
         return;
       }
 
-      const targetFrame = selection[0];
-      
-      if (targetFrame.type !== 'FRAME' && targetFrame.type !== 'COMPONENT') {
+      // Filter only frames and components
+      const validFrames = selection.filter(
+        node => node.type === 'FRAME' || node.type === 'COMPONENT'
+      );
+
+      if (validFrames.length === 0) {
         figma.ui.postMessage({ 
           type: 'error', 
-          message: 'Выберите фрейм или компонент' 
+          message: 'Выберите хотя бы один фрейм или компонент' 
         });
         return;
       }
 
-      await fillFrameWithData(targetFrame, msg.data);
-      
-      figma.ui.postMessage({ 
-        type: 'success', 
-        message: 'Данные успешно заполнены!' 
-      });
+      // Handle selection with random data from array if available
+      if (msg.allData && Array.isArray(msg.allData) && msg.allData.length > 0) {
+        await fillMultipleFramesWithRandomData(validFrames, msg.allData);
+        figma.ui.postMessage({ 
+          type: 'success', 
+          message: validFrames.length === 1 
+            ? 'Фрейм успешно заполнен!' 
+            : `${validFrames.length} фреймов успешно заполнены!` 
+        });
+      } 
+      // Fallback to single data if no array available
+      else {
+        await fillFrameWithData(validFrames[0], msg.data);
+        figma.ui.postMessage({ 
+          type: 'success', 
+          message: 'Данные успешно заполнены!' 
+        });
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
       figma.ui.postMessage({ 
@@ -43,10 +58,45 @@ figma.ui.onmessage = async (msg) => {
         message: `Ошибка: ${errorMessage}` 
       });
     }
+  } else if (msg.type === 'get-selection-info') {
+    // Send current selection info to UI
+    const selection = figma.currentPage.selection;
+    const validFrames = selection.filter(
+      node => node.type === 'FRAME' || node.type === 'COMPONENT'
+    );
+    figma.ui.postMessage({ 
+      type: 'selection-info', 
+      count: validFrames.length 
+    });
   } else if (msg.type === 'cancel') {
     figma.closePlugin();
   }
 };
+
+/**
+ * Fills multiple frames with random data from array
+ */
+async function fillMultipleFramesWithRandomData(frames: SceneNode[], dataArray: Record<string, any>[]) {
+  // Create a copy of the data array to track used items
+  const availableData = [...dataArray];
+  
+  for (const frame of frames) {
+    // If we've used all data, reset the available data
+    if (availableData.length === 0) {
+      availableData.push(...dataArray);
+    }
+    
+    // Pick random item from available data
+    const randomIndex = Math.floor(Math.random() * availableData.length);
+    const randomData = availableData[randomIndex];
+    
+    // Remove used item to avoid duplicates in the same batch
+    availableData.splice(randomIndex, 1);
+    
+    // Fill the frame
+    await fillFrameWithData(frame, randomData);
+  }
+}
 
 /**
  * Recursively fills frame with data based on layer names
@@ -129,10 +179,20 @@ async function fillImageFromUrl(node: GeometryMixin & MinimalFillsMixin, imageUr
   try {
     const image = await figma.createImageAsync(imageUrl);
     
+    // Preserve existing scaleMode if the node already has an image fill, otherwise use FIT
+    let scaleMode: 'FILL' | 'FIT' | 'CROP' | 'TILE' = 'FIT';
+    
+    if (node.fills && node.fills !== figma.mixed && Array.isArray(node.fills)) {
+      const existingImageFill = node.fills.find(fill => fill.type === 'IMAGE') as ImagePaint | undefined;
+      if (existingImageFill && existingImageFill.scaleMode) {
+        scaleMode = existingImageFill.scaleMode;
+      }
+    }
+    
     const fills: Paint[] = [{
       type: 'IMAGE',
       imageHash: image.hash,
-      scaleMode: 'FILL'
+      scaleMode: scaleMode
     }];
     
     node.fills = fills;
