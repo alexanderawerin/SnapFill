@@ -22,7 +22,10 @@
       </div>
 
       <div class="section" id="previewSection" style="display: none;">
-        <label class="label">Превью данных:</label>
+        <label class="label">
+          <span>Превью данных:</span>
+          <span id="dataCount" class="data-count"></span>
+        </label>
         <div id="dataPreview" class="data-preview"></div>
       </div>
 
@@ -40,6 +43,7 @@
     </div>
 
     <div class="footer">
+      <button id="randomButton" class="button button-random" disabled>🎲 Случайный</button>
       <button id="fillButton" class="button button-primary" disabled>Заполнить</button>
       <button id="cancelButton" class="button button-secondary">Отмена</button>
     </div>
@@ -49,13 +53,17 @@
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
     const fillButton = document.getElementById('fillButton');
+    const randomButton = document.getElementById('randomButton');
     const cancelButton = document.getElementById('cancelButton');
     const previewSection = document.getElementById('previewSection');
     const dataPreview = document.getElementById('dataPreview');
+    const dataCount = document.getElementById('dataCount');
     const errorMessage = document.getElementById('errorMessage');
     const successMessage = document.getElementById('successMessage');
 
-    let currentData = null;
+    let allData = null; // Store all data (array or single object)
+    let currentData = null; // Current data to fill
+    let isArray = false;
 
     // File input handler
     fileInput.addEventListener('change', async (e) => {
@@ -69,20 +77,30 @@
         const text = await file.text();
         
         if (file.name.endsWith('.json')) {
-          currentData = JSON.parse(text);
-          // If it's an array, take first item
-          if (Array.isArray(currentData)) {
-            currentData = currentData[0];
+          const parsed = JSON.parse(text);
+          // Check if it's an array
+          if (Array.isArray(parsed)) {
+            allData = parsed;
+            currentData = parsed[0];
+            isArray = true;
+          } else {
+            allData = parsed;
+            currentData = parsed;
+            isArray = false;
           }
         } else if (file.name.endsWith('.csv')) {
-          currentData = parseCSV(text);
+          allData = parseCSVAll(text);
+          currentData = allData[0];
+          isArray = true;
         }
 
         displayPreview(currentData);
         fillButton.disabled = false;
+        randomButton.disabled = !isArray; // Enable random button only for arrays
       } catch (error) {
         showError(`Ошибка чтения файла: ${error.message}`);
         fillButton.disabled = true;
+        randomButton.disabled = true;
       }
     });
 
@@ -98,33 +116,61 @@
       }
     });
 
+    // Random button handler
+    randomButton.addEventListener('click', () => {
+      if (isArray && allData && allData.length > 0) {
+        const randomIndex = Math.floor(Math.random() * allData.length);
+        currentData = allData[randomIndex];
+        displayPreview(currentData);
+        
+        parent.postMessage({ 
+          pluginMessage: { 
+            type: 'fill-data', 
+            data: currentData 
+          } 
+        }, '*');
+      }
+    });
+
     // Cancel button handler
     cancelButton.addEventListener('click', () => {
       parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
     });
 
-    // Parse CSV (simple implementation for first row)
-    function parseCSV(text) {
+    // Parse CSV - returns array of all rows
+    function parseCSVAll(text) {
       const lines = text.trim().split('\n');
       if (lines.length < 2) {
         throw new Error('CSV файл должен содержать заголовки и хотя бы одну строку данных');
       }
 
       const headers = lines[0].split(',').map(h => h.trim());
-      const values = lines[1].split(',').map(v => v.trim());
+      const results = [];
 
-      const result = {};
-      headers.forEach((header, index) => {
-        result[header] = values[index] || '';
-      });
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        const row = {};
+        headers.forEach((header, index) => {
+          row[header] = values[index] || '';
+        });
+        results.push(row);
+      }
 
-      return result;
+      return results;
     }
 
     // Display data preview
     function displayPreview(data) {
       previewSection.style.display = 'block';
       dataPreview.innerHTML = '';
+
+      // Show data count if it's an array
+      if (isArray && allData) {
+        dataCount.textContent = `(${allData.length} записей)`;
+        dataCount.style.display = 'inline';
+      } else {
+        dataCount.style.display = 'none';
+      }
 
       const fields = Object.keys(data).slice(0, 5); // Show first 5 fields
       fields.forEach(key => {

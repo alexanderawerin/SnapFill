@@ -128,6 +128,13 @@ body {
   font-weight: 500;
 }
 
+.data-count {
+  font-size: 11px;
+  color: #0066ff;
+  font-weight: 500;
+  margin-left: 6px;
+}
+
 /* Messages */
 .error-message,
 .success-message {
@@ -157,6 +164,7 @@ body {
   padding-top: 16px;
   border-top: 1px solid #e0e0e0;
   margin-top: auto;
+  flex-wrap: wrap;
 }
 
 .button {
@@ -199,6 +207,28 @@ body {
 
 .button-secondary:active {
   background: #d0d0d0;
+}
+
+.button-random {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  flex: 1;
+  min-width: 120px;
+}
+
+.button-random:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+  transform: translateY(-1px);
+}
+
+.button-random:active:not(:disabled) {
+  background: linear-gradient(135deg, #4a5bc4 0%, #5e357d 100%);
+  transform: translateY(0);
+}
+
+.button-random:disabled {
+  background: #e0e0e0;
+  color: #999;
 }
 
 /* Scrollbar */
