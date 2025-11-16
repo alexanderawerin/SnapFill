@@ -3,7 +3,11 @@
   "id": "snapfill-data-plugin",
   "api": "1.0.0",
   "main": "dist/code.js",
-  "ui": "dist/ui.html",
+  "ui": {
+    "file": "dist/ui.html",
+    "width": 400,
+    "height": 480
+  },
   "editorType": ["figma"],
   "networkAccess": {
     "allowedDomains": ["*"],

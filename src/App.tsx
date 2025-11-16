@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -14,6 +14,24 @@ function App() {
   const [isArray, setIsArray] = useState(false);
   const [fileName, setFileName] = useState<string>('');
   const [message, setMessage] = useState<{ type: 'success' | 'error' | null; text: string }>({ type: null, text: '' });
+
+  // Detect Figma theme
+  useEffect(() => {
+    const checkTheme = () => {
+      const darkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+
+    checkTheme();
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', checkTheme);
+    
+    return () => mediaQuery.removeEventListener('change', checkTheme);
+  }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,7 +105,7 @@ function App() {
     parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     window.onmessage = (event) => {
       const msg = event.data.pluginMessage;
       if (msg.type === 'error') {
@@ -99,63 +117,57 @@ function App() {
   }, []);
 
   return (
-    <div className="h-screen w-full bg-background p-4 flex flex-col">
-      <Card className="flex-1 flex flex-col">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-xl">SnapFill</CardTitle>
-          <CardDescription>Заполните макет данными из файла</CardDescription>
+    <div className="h-screen w-full bg-background p-2 flex flex-col">
+      <Card className="flex-1 flex flex-col shadow-none border-0">
+        <CardHeader className="pb-2 pt-2 px-3">
+          <CardTitle className="text-base">SnapFill</CardTitle>
+          <CardDescription className="text-xs">Заполните макет данными</CardDescription>
         </CardHeader>
 
-        <CardContent className="flex-1 space-y-4 overflow-y-auto">
+        <CardContent className="flex-1 space-y-2 overflow-y-auto px-3 pb-2">
           {/* File Upload */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Загрузите CSV или JSON файл</label>
-            <div className="flex items-center gap-2">
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <Button variant="outline" className="w-full" asChild>
-                  <span>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Выбрать файл
-                  </span>
-                </Button>
-                <input
-                  id="file-upload"
-                  type="file"
-                  accept=".csv,.json"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-              </label>
-            </div>
-            {fileName && (
-              <p className="text-xs text-muted-foreground">{fileName}</p>
-            )}
+          <div className="space-y-1">
+            <label htmlFor="file-upload" className="cursor-pointer block">
+              <Button variant="outline" className="w-full h-8 text-xs" size="sm" asChild>
+                <span>
+                  <Upload className="w-3 h-3 mr-1" />
+                  {fileName ? fileName : 'Выбрать файл'}
+                </span>
+              </Button>
+              <input
+                id="file-upload"
+                type="file"
+                accept=".csv,.json"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+            </label>
           </div>
 
           {/* Data Preview */}
           {currentData && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Превью данных:</label>
+                <label className="text-xs font-medium">Превью данных:</label>
                 {isArray && allData && (
                   <span className="text-xs font-medium text-primary">
                     ({allData.length} записей)
                   </span>
                 )}
               </div>
-              <div className="rounded-lg border bg-muted/50 p-3 max-h-40 overflow-y-auto">
-                {Object.keys(currentData).slice(0, 5).map((key) => (
-                  <div key={key} className="text-xs py-1">
+              <div className="rounded-md border bg-muted/30 p-2 max-h-20 overflow-y-auto text-[10px]">
+                {Object.keys(currentData).slice(0, 3).map((key) => (
+                  <div key={key} className="py-0.5 leading-tight truncate">
                     <strong className="font-medium">{key}:</strong>{' '}
                     <span className="text-muted-foreground">
-                      {String(currentData[key]).substring(0, 30)}
-                      {String(currentData[key]).length > 30 ? '...' : ''}
+                      {String(currentData[key]).substring(0, 20)}
+                      {String(currentData[key]).length > 20 ? '...' : ''}
                     </span>
                   </div>
                 ))}
-                {Object.keys(currentData).length > 5 && (
-                  <div className="text-xs text-muted-foreground py-1">
-                    ...и еще {Object.keys(currentData).length - 5} полей
+                {Object.keys(currentData).length > 3 && (
+                  <div className="text-muted-foreground py-0.5">
+                    +{Object.keys(currentData).length - 3}
                   </div>
                 )}
               </div>
@@ -163,45 +175,46 @@ function App() {
           )}
 
           {/* Info Alert */}
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription className="text-xs">
-              Убедитесь, что слои в фрейме названы как поля в файле данных
+          <Alert className="py-2">
+            <Info className="h-3 w-3" />
+            <AlertDescription className="text-[10px] leading-tight">
+              Слои должны быть названы как поля в файле
             </AlertDescription>
           </Alert>
 
           {/* Messages */}
           {message.type === 'error' && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs">{message.text}</AlertDescription>
+            <Alert variant="destructive" className="py-2">
+              <AlertCircle className="h-3 w-3" />
+              <AlertDescription className="text-[10px]">{message.text}</AlertDescription>
             </Alert>
           )}
           {message.type === 'success' && (
-            <Alert variant="success">
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription className="text-xs">{message.text}</AlertDescription>
+            <Alert variant="success" className="py-2">
+              <CheckCircle2 className="h-3 w-3" />
+              <AlertDescription className="text-[10px]">{message.text}</AlertDescription>
             </Alert>
           )}
         </CardContent>
 
-        <CardFooter className="flex gap-2 pt-4 border-t">
+        <CardFooter className="flex gap-1.5 pt-2 pb-2 border-t px-3">
           {isArray && (
             <Button
               variant="gradient"
               onClick={handleRandom}
               disabled={!currentData}
-              className="flex-1"
+              className="flex-1 h-8"
+              size="sm"
             >
-              <Shuffle className="w-4 h-4 mr-2" />
-              Случайный
+              <Shuffle className="w-3 h-3 mr-1" />
+              <span className="text-[11px]">Случайный</span>
             </Button>
           )}
-          <Button onClick={handleFill} disabled={!currentData} className="flex-1">
-            Заполнить
+          <Button onClick={handleFill} disabled={!currentData} className="flex-1 h-8" size="sm">
+            <span className="text-[11px]">Заполнить</span>
           </Button>
-          <Button variant="outline" onClick={handleCancel}>
-            <X className="w-4 h-4" />
+          <Button variant="outline" onClick={handleCancel} size="sm" className="h-8 w-8 p-0">
+            <X className="w-3 h-3" />
           </Button>
         </CardFooter>
       </Card>

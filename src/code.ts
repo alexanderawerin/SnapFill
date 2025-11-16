@@ -1,6 +1,10 @@
 // Main plugin code - runs in Figma sandbox
 
-figma.showUI(__html__, { width: 400, height: 500 });
+figma.showUI(__html__, { 
+  width: 400, 
+  height: 520,
+  themeColors: true 
+});
 
 // Message handler from UI
 figma.ui.onmessage = async (msg) => {
@@ -71,9 +75,12 @@ async function fillNodeWithData(node: SceneNode, data: Record<string, any>) {
       node.characters = value;
     }
     
-    // Handle image fills (URL)
-    else if ((node.type === 'RECTANGLE' || node.type === 'FRAME') && typeof value === 'string' && isImageUrl(value)) {
-      await fillImageFromUrl(node as RectangleNode | FrameNode, value);
+    // Handle image fills (URL) - support RECTANGLE, FRAME, and nodes with rounded corners
+    else if (typeof value === 'string' && isImageUrl(value)) {
+      if (node.type === 'RECTANGLE' || node.type === 'FRAME' || node.type === 'ELLIPSE' || 
+          (node.type as any) === 'ROUNDED_RECTANGLE') {
+        await fillImageFromUrl(node as GeometryMixin & MinimalFillsMixin, value);
+      }
     }
   }
   
@@ -89,15 +96,38 @@ async function fillNodeWithData(node: SceneNode, data: Record<string, any>) {
  * Checks if string is an image URL
  */
 function isImageUrl(str: string): boolean {
-  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
-  return str.startsWith('http') && (imageExtensions.test(str) || str.includes('image'));
+  if (!str || typeof str !== 'string') return false;
+  if (!str.startsWith('http')) return false;
+  
+  // Check for common image extensions
+  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)(\?|$)/i;
+  if (imageExtensions.test(str)) return true;
+  
+  // Check for common image hosting domains and patterns
+  const imagePatterns = [
+    /images\.unsplash\.com/i,
+    /cdn.*\.com.*\.(jpg|jpeg|png|gif|webp|svg)/i,
+    /\/image\//i,
+    /\/img\//i,
+    /\/images\//i,
+    /\/assets\//i,
+    /is\/image/i,
+    /fmt=(jpg|jpeg|png|webp|gif)/i,
+    /\.cdn\./i,
+    /storeimages\.cdn/i,
+    /avatars\.mds/i,
+    /assetsadobe/i,
+  ];
+  
+  return imagePatterns.some(pattern => pattern.test(str));
 }
 
 /**
  * Fills node with image from URL
  */
-async function fillImageFromUrl(node: RectangleNode | FrameNode, imageUrl: string) {
+async function fillImageFromUrl(node: GeometryMixin & MinimalFillsMixin, imageUrl: string) {
   try {
+    console.log(`Loading image from: ${imageUrl}`);
     const image = await figma.createImageAsync(imageUrl);
     
     const fills: Paint[] = [{
@@ -107,8 +137,13 @@ async function fillImageFromUrl(node: RectangleNode | FrameNode, imageUrl: strin
     }];
     
     node.fills = fills;
+    console.log(`Successfully loaded image`);
   } catch (error) {
     console.error(`Failed to load image from ${imageUrl}:`, error);
+    figma.ui.postMessage({ 
+      type: 'error', 
+      message: `Не удалось загрузить изображение: ${imageUrl}`
+    });
   }
 }
 
