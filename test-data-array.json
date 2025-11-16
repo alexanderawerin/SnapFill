@@ -1,0 +1,30 @@
+[
+  {
+    "title": "iPhone 15 Pro",
+    "subtitle": "Титан. Такой прочный. Такой легкий. Такой Pro.",
+    "price": "от 99 990 ₽",
+    "description": "Прочный и легкий титановый корпус с текстурированным матовым стеклом. Система камер Pro. Чип A17 Pro.",
+    "badge": "Новинка",
+    "rating": "4.9",
+    "image": "https://images.unsplash.com/photo-1696446702597-c39f6b0d2a0a?w=800&q=80"
+  },
+  {
+    "title": "MacBook Pro 16",
+    "subtitle": "Феноменальная производительность",
+    "price": "от 299 990 ₽",
+    "description": "Чип M3 Max. До 22 часов без подзарядки. Дисплей Liquid Retina XDR",
+    "badge": "Хит продаж",
+    "rating": "5.0",
+    "image": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=800&q=80"
+  },
+  {
+    "title": "AirPods Pro",
+    "subtitle": "Магия звука",
+    "price": "от 24 990 ₽",
+    "description": "Персонализированное пространственное аудио с динамическим отслеживанием движения головы",
+    "badge": "Популярное",
+    "rating": "4.8",
+    "image": "https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=800&q=80"
+  }
+]
+

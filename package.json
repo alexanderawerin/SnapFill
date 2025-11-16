@@ -1,0 +1,23 @@
+{
+  "name": "snapfill",
+  "version": "0.1.0",
+  "description": "Figma plugin to populate designs with data from CSV/JSON and REST APIs",
+  "scripts": {
+    "build": "tsc && npm run build:ui",
+    "build:ui": "cp src/ui.html dist/ui.html && cp src/ui.css dist/ui.css",
+    "watch": "tsc --watch",
+    "dev": "concurrently \"npm run watch\" \"npm run build:ui\""
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.90.0",
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "papaparse": "^5.4.1"
+  }
+}
+

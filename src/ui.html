@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>SnapFill</h1>
+      <p class="subtitle">Заполните макет данными из файла</p>
+    </div>
+
+    <div class="content">
+      <div class="section">
+        <label class="label">Загрузите CSV или JSON файл</label>
+        <div class="file-input-wrapper">
+          <input type="file" id="fileInput" accept=".csv,.json" class="file-input">
+          <label for="fileInput" class="file-label">Выбрать файл</label>
+          <span id="fileName" class="file-name">Файл не выбран</span>
+        </div>
+      </div>
+
+      <div class="section" id="previewSection" style="display: none;">
+        <label class="label">Превью данных:</label>
+        <div id="dataPreview" class="data-preview"></div>
+      </div>
+
+      <div class="section">
+        <label class="label info">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1a6 6 0 110 12A6 6 0 018 2zm0 2a1 1 0 100 2 1 1 0 000-2zm-1 3a1 1 0 011-1h0a1 1 0 011 1v3a1 1 0 01-1 1h0a1 1 0 01-1-1V7z"/>
+          </svg>
+          <span>Убедитесь, что слои в фрейме названы как поля в файле данных</span>
+        </label>
+      </div>
+
+      <div id="errorMessage" class="error-message" style="display: none;"></div>
+      <div id="successMessage" class="success-message" style="display: none;"></div>
+    </div>
+
+    <div class="footer">
+      <button id="fillButton" class="button button-primary" disabled>Заполнить</button>
+      <button id="cancelButton" class="button button-secondary">Отмена</button>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const fillButton = document.getElementById('fillButton');
+    const cancelButton = document.getElementById('cancelButton');
+    const previewSection = document.getElementById('previewSection');
+    const dataPreview = document.getElementById('dataPreview');
+    const errorMessage = document.getElementById('errorMessage');
+    const successMessage = document.getElementById('successMessage');
+
+    let currentData = null;
+
+    // File input handler
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      fileName.textContent = file.name;
+      hideMessages();
+
+      try {
+        const text = await file.text();
+        
+        if (file.name.endsWith('.json')) {
+          currentData = JSON.parse(text);
+          // If it's an array, take first item
+          if (Array.isArray(currentData)) {
+            currentData = currentData[0];
+          }
+        } else if (file.name.endsWith('.csv')) {
+          currentData = parseCSV(text);
+        }
+
+        displayPreview(currentData);
+        fillButton.disabled = false;
+      } catch (error) {
+        showError(`Ошибка чтения файла: ${error.message}`);
+        fillButton.disabled = true;
+      }
+    });
+
+    // Fill button handler
+    fillButton.addEventListener('click', () => {
+      if (currentData) {
+        parent.postMessage({ 
+          pluginMessage: { 
+            type: 'fill-data', 
+            data: currentData 
+          } 
+        }, '*');
+      }
+    });
+
+    // Cancel button handler
+    cancelButton.addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'cancel' } }, '*');
+    });
+
+    // Parse CSV (simple implementation for first row)
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      if (lines.length < 2) {
+        throw new Error('CSV файл должен содержать заголовки и хотя бы одну строку данных');
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim());
+      const values = lines[1].split(',').map(v => v.trim());
+
+      const result = {};
+      headers.forEach((header, index) => {
+        result[header] = values[index] || '';
+      });
+
+      return result;
+    }
+
+    // Display data preview
+    function displayPreview(data) {
+      previewSection.style.display = 'block';
+      dataPreview.innerHTML = '';
+
+      const fields = Object.keys(data).slice(0, 5); // Show first 5 fields
+      fields.forEach(key => {
+        const field = document.createElement('div');
+        field.className = 'preview-field';
+        field.innerHTML = `<strong>${key}:</strong> ${truncate(data[key], 30)}`;
+        dataPreview.appendChild(field);
+      });
+
+      if (Object.keys(data).length > 5) {
+        const more = document.createElement('div');
+        more.className = 'preview-field';
+        more.textContent = `...и еще ${Object.keys(data).length - 5} полей`;
+        dataPreview.appendChild(more);
+      }
+    }
+
+    // Truncate text
+    function truncate(text, length) {
+      const str = String(text);
+      return str.length > length ? str.substring(0, length) + '...' : str;
+    }
+
+    // Message handlers
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      
+      if (msg.type === 'error') {
+        showError(msg.message);
+      } else if (msg.type === 'success') {
+        showSuccess(msg.message);
+      }
+    };
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+      successMessage.style.display = 'none';
+    }
+
+    function showSuccess(message) {
+      successMessage.textContent = message;
+      successMessage.style.display = 'block';
+      errorMessage.style.display = 'none';
+    }
+
+    function hideMessages() {
+      errorMessage.style.display = 'none';
+      successMessage.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
+
