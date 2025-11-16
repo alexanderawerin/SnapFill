@@ -127,7 +127,6 @@ function isImageUrl(str: string): boolean {
  */
 async function fillImageFromUrl(node: GeometryMixin & MinimalFillsMixin, imageUrl: string) {
   try {
-    console.log(`Loading image from: ${imageUrl}`);
     const image = await figma.createImageAsync(imageUrl);
     
     const fills: Paint[] = [{
@@ -137,13 +136,9 @@ async function fillImageFromUrl(node: GeometryMixin & MinimalFillsMixin, imageUr
     }];
     
     node.fills = fills;
-    console.log(`Successfully loaded image`);
   } catch (error) {
-    console.error(`Failed to load image from ${imageUrl}:`, error);
-    figma.ui.postMessage({ 
-      type: 'error', 
-      message: `Не удалось загрузить изображение: ${imageUrl}`
-    });
+    // Silently fail - images from some CDNs might not load
+    // Don't show error to avoid cluttering the UI
   }
 }
 
