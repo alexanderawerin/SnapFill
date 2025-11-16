@@ -6,7 +6,8 @@
   "ui": "dist/ui.html",
   "editorType": ["figma"],
   "networkAccess": {
-    "allowedDomains": ["*"]
+    "allowedDomains": ["*"],
+    "reasoning": "Plugin needs network access to load images from URLs provided in data files (CSV/JSON) and to fetch data from REST APIs in future versions"
   }
 }
 
