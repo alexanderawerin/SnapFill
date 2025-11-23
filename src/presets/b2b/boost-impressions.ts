@@ -1,0 +1,87 @@
+import { Preset } from '../types';
+
+export const boostImpressionsPreset: Preset = {
+  id: 'b2b-boost-impressions',
+  name: 'Буст показов',
+  icon: 'Eye',
+  description: 'Кампании для увеличения видимости товаров',
+  data: [
+    {
+      campaign_name: 'ШПД Буст Показов ФБС от 23.10 усиленная П',
+      tags: 'Файл',
+      status: 'Отключена',
+      products_count: '0',
+      bid: '50-1 742,37 ₽',
+      budget: '50 000 ₽',
+      impressions: '1 705 338',
+      reach: '984 715',
+      clicks: '21 752',
+      ctr: '1,28 %',
+      frequency: '2,47',
+      cart_adds: '6 008',
+      ordered: '734',
+      success_rate: '0,04 %',
+      revenue: '18 184 619 ₽',
+      cpo: '1 170,39 ₽',
+      expenses: '685 526,73 ₽'
+    },
+    {
+      campaign_name: 'ШПД Буст Показов ФБС от 21.10 Льготовой П',
+      tags: 'Файл',
+      status: 'Отключена',
+      products_count: '0',
+      bid: '90-1 150 ₽',
+      budget: '50 000 ₽',
+      impressions: '641 032',
+      reach: '330 980',
+      clicks: '8 572',
+      ctr: '1,04 %',
+      frequency: '2,54',
+      cart_adds: '2 038',
+      ordered: '287',
+      success_rate: '0,03 %',
+      revenue: '8 306 840 ₽',
+      cpo: '1 493,7 ₽',
+      expenses: '428 691,15 ₽'
+    },
+    {
+      campaign_name: 'Буст показов, концентраторы, 12,000 в день, октя 12.08',
+      tags: 'Файл',
+      status: 'Отключена',
+      products_count: '0',
+      bid: '50-1 000 ₽',
+      budget: '12 000 ₽',
+      impressions: '0',
+      reach: '0',
+      clicks: '0',
+      ctr: '0 %',
+      frequency: '0',
+      cart_adds: '0',
+      ordered: '0',
+      success_rate: '0 %',
+      revenue: '0 ₽',
+      cpo: '—',
+      expenses: '0 ₽'
+    },
+    {
+      campaign_name: 'Powertech, Повинновы 16.09 20к -октя 14.09.',
+      tags: 'Платформа',
+      status: 'Отключена',
+      products_count: '0',
+      bid: '100 ₽',
+      budget: '810 ₽',
+      impressions: '0',
+      reach: '0',
+      clicks: '0',
+      ctr: '0 %',
+      frequency: '0',
+      cart_adds: '0',
+      ordered: '0',
+      success_rate: '0 %',
+      revenue: '0 ₽',
+      cpo: '—',
+      expenses: '0 ₽'
+    }
+  ]
+};
+

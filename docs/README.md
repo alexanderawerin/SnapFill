@@ -4,6 +4,7 @@
 
 ## Файлы
 
+- **[PRESETS_GUIDE.md](./PRESETS_GUIDE.md)** — полное руководство по встроенным пресетам данных (NEW!)
 - **[INSTRUCTIONS.md](./INSTRUCTIONS.md)** — инструкции по использованию плагина
 - **[FIGMA_LAYER_GUIDE.md](./FIGMA_LAYER_GUIDE.md)** — руководство по именованию слоев в Figma
 - **[MULTIPLE_FRAMES_FEATURE.md](./MULTIPLE_FRAMES_FEATURE.md)** — документация по функции множественного заполнения

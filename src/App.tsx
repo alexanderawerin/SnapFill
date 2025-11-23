@@ -1,19 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, AlertCircle } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Empty, EmptyHeader, EmptyMedia, EmptyDescription } from '@/components/ui/empty';
+import { AlertCircle, Upload } from 'lucide-react';
+import { PresetsGrid } from '@/components/PresetsGrid';
+import { presets, Preset, PresetCategory, DataItem } from '@/presets';
+import Papa from 'papaparse';
 
-interface DataItem {
-  [key: string]: any;
-}
+// Constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_PREVIEW_FIELDS = 5;
 
 function App() {
   const [currentData, setCurrentData] = useState<DataItem | null>(null);
   const [allData, setAllData] = useState<DataItem[] | null>(null);
-  const [isArray, setIsArray] = useState(false);
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<PresetCategory>('b2b');
   const [fileName, setFileName] = useState<string>('');
   const [message, setMessage] = useState<{ type: 'success' | 'error' | null; text: string }>({ type: null, text: '' });
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Detect Figma theme
   useEffect(() => {
@@ -33,10 +41,36 @@ function App() {
     return () => mediaQuery.removeEventListener('change', checkTheme);
   }, []);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handlePresetSelect = (preset: Preset) => {
+    setSelectedPresetId(preset.id);
+    setAllData(preset.data);
+    setCurrentData(preset.data[0]);
+    setFileName('');
+    setMessage({ type: null, text: '' });
+  };
 
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value as PresetCategory);
+    // Сбрасываем выбор при смене категории
+    setSelectedPresetId(null);
+    setAllData(null);
+    setCurrentData(null);
+    setFileName('');
+    setMessage({ type: null, text: '' });
+  };
+
+  const handleFileUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const processFile = async (file: File) => {
+    // Check file size
+    if (file.size > MAX_FILE_SIZE) {
+      setMessage({ type: 'error', text: `Файл слишком большой (максимум ${MAX_FILE_SIZE / 1024 / 1024}MB)` });
+      return;
+    }
+
+    setSelectedPresetId('custom-file');
     setFileName(file.name);
     setMessage({ type: null, text: '' });
 
@@ -48,17 +82,14 @@ function App() {
         if (Array.isArray(parsed)) {
           setAllData(parsed);
           setCurrentData(parsed[0]);
-          setIsArray(true);
         } else {
           setAllData([parsed]);
           setCurrentData(parsed);
-          setIsArray(false);
         }
       } else if (file.name.endsWith('.csv')) {
         const parsedArray = parseCSVAll(text);
         setAllData(parsedArray);
         setCurrentData(parsedArray[0]);
-        setIsArray(true);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -66,49 +97,59 @@ function App() {
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file && (file.name.endsWith('.csv') || file.name.endsWith('.json'))) {
+      await processFile(file);
+    } else {
+      setMessage({ type: 'error', text: 'Поддерживаются только файлы CSV и JSON' });
+    }
+  };
+
   const parseCSVAll = (text: string): DataItem[] => {
-    const lines = text.trim().split('\n');
-    if (lines.length < 2) {
+    const result = Papa.parse(text, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header: string) => header.trim(),
+      transform: (value: string) => value.trim()
+    });
+
+    if (result.errors.length > 0) {
+      throw new Error(`Ошибка парсинга CSV: ${result.errors[0].message}`);
+    }
+
+    if (!result.data || result.data.length === 0) {
       throw new Error('CSV файл должен содержать заголовки и хотя бы одну строку данных');
     }
 
-    // Simple CSV parser that handles quoted values with commas
-    const parseLine = (line: string): string[] => {
-      const result: string[] = [];
-      let current = '';
-      let inQuotes = false;
-
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-          result.push(current.trim());
-          current = '';
-        } else {
-          current += char;
-        }
-      }
-      result.push(current.trim());
-      return result;
-    };
-
-    const headers = parseLine(lines[0]);
-    const results: DataItem[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue; // Skip empty lines
-      
-      const values = parseLine(lines[i]);
-      const row: DataItem = {};
-      headers.forEach((header, index) => {
-        row[header] = values[index] || '';
-      });
-      results.push(row);
-    }
-
-    return results;
+    return result.data as DataItem[];
   };
 
   const handleFill = () => {
@@ -119,118 +160,180 @@ function App() {
           data: currentData,
           allData: allData // Send all data for random selection
         } 
-      }, '*');
+      }, 'https://www.figma.com');
     }
   };
 
   useEffect(() => {
-    window.onmessage = (event) => {
+    const handleMessage = (event: MessageEvent) => {
       const msg = event.data.pluginMessage;
+      if (!msg) return;
+      
       if (msg.type === 'error') {
         setMessage({ type: 'error', text: msg.message });
       } else if (msg.type === 'success') {
-        setMessage({ type: 'success', text: msg.message });
+        // Success is visible in Figma itself, no need to show notification
+        setMessage({ type: null, text: '' });
       }
     };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  return (
-    <div className="h-screen w-full bg-background flex flex-col">
-      <Card className="flex-1 flex flex-col shadow-none border-0">
-        <CardContent className="flex-1 flex flex-col overflow-y-auto p-0">
-          {!fileName ? (
-            // Empty state - instruction screen
-            <label htmlFor="file-upload-empty" className="cursor-pointer flex-1 flex flex-col p-4">
-              <div className="flex-1 border-2 border-dashed border-border rounded-lg p-8 flex flex-col items-center justify-center text-center hover:border-primary/50 transition-colors">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-4">
-                  <Upload className="w-8 h-8 text-white" />
-                </div>
-                
-                <h3 className="text-base font-semibold mb-2">
-                  Загрузите файл с данными
-                </h3>
-                
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  Выберите <span className="font-medium text-foreground">JSON</span> или <span className="font-medium text-foreground">CSV</span> файл для заполнения макетов
-                </p>
-              </div>
-              <input
-                id="file-upload-empty"
-                type="file"
-                accept=".csv,.json"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-            </label>
-          ) : (
-            // File selected - data preview and controls
-            <div className="space-y-3 flex-1 flex flex-col p-4">
-              {/* File Upload */}
-              <div>
-                <label htmlFor="file-upload" className="cursor-pointer block">
-                  <Button variant="outline" className="w-full h-10" asChild>
-                    <span>
-                      <Upload className="w-4 h-4 mr-2" />
-                      {fileName}
-                    </span>
-                  </Button>
-                  <input
-                    id="file-upload"
-                    type="file"
-                    accept=".csv,.json"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                </label>
-              </div>
+  const hasData = currentData !== null && allData !== null;
+  const dataSourceLabel = fileName || (
+    selectedPresetId && 
+    selectedPresetId !== 'custom-file' && 
+    selectedCategory !== 'file'
+      ? presets[selectedCategory].find(p => p.id === selectedPresetId)?.name 
+      : null
+  );
 
-              {/* Data Preview */}
+  return (
+    <div className="h-screen w-full bg-background flex flex-col relative">
+      <Card className="flex-1 flex flex-col shadow-none border-0 rounded-none py-0 gap-0">
+        <CardContent className={`flex-1 p-0 overflow-y-auto ${selectedPresetId ? 'pb-20' : 'pb-0'}`}>
+          {/* Header and Tabs */}
+          <div className="p-4 space-y-3">
+            <h2 className="text-lg font-medium tracking-tight">Выбери пресет или загрузи файл</h2>
+            <Tabs 
+              value={selectedCategory} 
+              onValueChange={handleCategoryChange}
+            >
+              <TabsList className="w-full">
+                <TabsTrigger value="b2b" className="flex-1">B2B</TabsTrigger>
+                <TabsTrigger value="b2c" className="flex-1">B2C</TabsTrigger>
+                <TabsTrigger value="file" className="flex-1">JSON/CSV</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          {selectedCategory === 'b2b' && (
+            <PresetsGrid
+              presets={presets.b2b}
+              selectedPresetId={selectedPresetId}
+              onPresetSelect={handlePresetSelect}
+            />
+          )}
+          
+          {selectedCategory === 'b2c' && (
+            <PresetsGrid
+              presets={presets.b2c}
+              selectedPresetId={selectedPresetId}
+              onPresetSelect={handlePresetSelect}
+            />
+          )}
+
+          {selectedCategory === 'file' && (
+            <div className="px-4 pb-4">
+              <div
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <Empty 
+                  onClick={handleFileUploadClick}
+                  className={`
+                    border-2 border-dashed rounded-lg py-12 min-h-[240px]
+                    transition-all cursor-pointer
+                    ${isDragging 
+                      ? 'border-primary bg-primary/5 scale-[0.99]' 
+                      : 'border-border hover:border-primary/50 hover:bg-accent/50'
+                    }
+                    ${selectedPresetId === 'custom-file' ? 'border-primary bg-primary/5' : ''}
+                  `}
+                >
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Upload className={isDragging || selectedPresetId === 'custom-file' ? 'text-primary' : ''} />
+                    </EmptyMedia>
+                    <EmptyDescription>
+                      {isDragging ? 'Отпустите файл' : 'Перетащи CSV или JSON файл сюда или нажми для выбора'}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+                <div className="mt-4 space-y-2" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Названия полей в файле должны совпадать с именами слоёв в Figma. Например, если в макете есть текстовый слой <code className="text-foreground font-medium px-1 py-0.5 bg-muted rounded text-[11px]">title</code>, в файле тоже должно быть поле <code className="text-foreground font-medium px-1 py-0.5 bg-muted rounded text-[11px]">title</code>.
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Плагин подставит данные только в те слои, для которых найдёт одноимённые поля.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,.json"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+
+          {/* Data Preview Section */}
+          {hasData && (
+            <div className="px-4 pb-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-medium tracking-tight">
+                  {dataSourceLabel || 'Данные загружены'}
+                </h2>
+                {allData && (
+                  <span className="text-xs font-medium text-muted-foreground px-2 py-0.5 bg-muted rounded translate-y-[2px]">
+                    {allData.length} {allData.length === 1 ? 'запись' : 'записей'}
+                  </span>
+                )}
+              </div>
+              
               {currentData && (
-                <div className="space-y-2 flex-1 flex flex-col min-h-0">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">Превью данных</label>
-                    {isArray && allData && (
-                      <span className="text-xs font-semibold text-primary px-2 py-0.5 bg-primary/10 rounded">
-                        {allData.length} записей
+                <div className="rounded-md border bg-muted/50 p-3 max-h-48 overflow-y-auto">
+                  {Object.keys(currentData).slice(0, MAX_PREVIEW_FIELDS).map((key) => (
+                    <div key={key} className="text-xs py-1 flex gap-2">
+                      <strong className="font-semibold min-w-20 shrink-0">{key}:</strong>
+                      <span className="text-muted-foreground truncate">
+                        {String(currentData[key])}
                       </span>
-                    )}
-                  </div>
-                  <div className="rounded-md border bg-muted/50 p-3 flex-1 overflow-y-auto min-h-0">
-                    {Object.keys(currentData).map((key) => (
-                      <div key={key} className="text-xs py-1 flex gap-2">
-                        <strong className="font-semibold min-w-20 shrink-0">{key}:</strong>
-                        <span className="text-muted-foreground truncate">
-                          {String(currentData[key])}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
+                  {Object.keys(currentData).length > MAX_PREVIEW_FIELDS && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      ... и еще {Object.keys(currentData).length - MAX_PREVIEW_FIELDS} полей
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Messages */}
               {message.type === 'error' && (
-                <Alert variant="destructive" className="py-2.5 px-3">
+                <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription className="text-xs">{message.text}</AlertDescription>
+                  <AlertDescription>{message.text}</AlertDescription>
                 </Alert>
               )}
             </div>
           )}
         </CardContent>
-
-        {fileName && (
-          <CardFooter className="pt-3 pb-3 border-t px-4">
-            <Button 
-              onClick={handleFill} 
-              disabled={!currentData} 
-              className="w-full bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-            >
-              Заполнить
-            </Button>
-          </CardFooter>
-        )}
       </Card>
+
+      {/* Fixed Footer Button - Animated */}
+      <div 
+        className={`fixed bottom-0 left-0 right-0 p-4 bg-background border-t backdrop-blur-sm bg-background/95 transition-all duration-300 ease-out ${
+          selectedPresetId 
+            ? 'translate-y-0 opacity-100' 
+            : 'translate-y-full opacity-0 pointer-events-none'
+        }`}
+      >
+        <Button 
+          onClick={handleFill} 
+          disabled={!currentData} 
+          className="w-full"
+        >
+          Заполнить
+        </Button>
+      </div>
     </div>
   );
 }
