@@ -104,7 +104,7 @@ title,description,price,image
 каждая карточка заполняется случайным товаром без повторов
 ```
 
-📖 **Подробнее:** см. [MULTIPLE_FRAMES_FEATURE.md](./MULTIPLE_FRAMES_FEATURE.md)
+📖 **Подробнее:** см. [MULTIPLE_FRAMES_FEATURE.md](./docs/MULTIPLE_FRAMES_FEATURE.md)
 
 ## 🛠 Разработка
 
@@ -126,11 +126,28 @@ npm run dev
 ```
 SnapFill/
 ├── src/
-│   ├── code.ts      # Основной код плагина (Figma API)
-│   ├── ui.html      # Интерфейс плагина
-│   └── ui.css       # Стили интерфейса
-├── dist/            # Скомпилированные файлы
-├── manifest.json    # Манифест плагина
+│   ├── code.ts           # Основной код плагина (Figma API)
+│   ├── ui.html           # Интерфейс плагина
+│   ├── App.tsx           # React компонент UI
+│   ├── main.tsx          # Точка входа React
+│   ├── components/       # UI компоненты
+│   └── lib/              # Утилиты
+├── dist/                 # Скомпилированные файлы
+├── docs/                 # Документация
+│   ├── FIGMA_LAYER_GUIDE.md
+│   ├── INSTRUCTIONS.md
+│   ├── MULTIPLE_FRAMES_FEATURE.md
+│   ├── PROJECT_STATUS.md
+│   ├── QUICK_TEST_GUIDE.md
+│   ├── RANDOM_FEATURE.md
+│   └── SHADCN_UPDATE.md
+├── examples/             # Примеры данных для тестирования
+│   ├── test-data.json
+│   ├── test-data.csv
+│   ├── test-data-array.json
+│   ├── dyson-example.json
+│   └── products-collection.json
+├── manifest.json         # Манифест плагина
 ├── package.json
 └── tsconfig.json
 ```
