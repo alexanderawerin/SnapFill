@@ -1,16 +1,26 @@
 import React from 'react';
 import * as Icons from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 interface PresetCardProps {
   name: string;
   icon: string;
-  description: string;
   selected?: boolean;
   onClick?: () => void;
   isFileUpload?: boolean;
 }
+
+// Type-safe icon lookup with fallback
+const getIconComponent = (iconName: string): LucideIcon => {
+  const icon = Icons[iconName as keyof typeof Icons];
+  // Check if it's a valid React component (LucideIcon)
+  if (icon && typeof icon === 'function') {
+    return icon as LucideIcon;
+  }
+  return Icons.Box;
+};
 
 export const PresetCard: React.FC<PresetCardProps> = ({
   name,
@@ -19,8 +29,7 @@ export const PresetCard: React.FC<PresetCardProps> = ({
   onClick,
   isFileUpload = false
 }) => {
-  // Get icon component dynamically
-  const IconComponent = (Icons as any)[icon] || Icons.Box;
+  const IconComponent = getIconComponent(icon);
 
   return (
     <Card

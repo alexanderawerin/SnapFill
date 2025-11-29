@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -11,7 +11,45 @@ import Papa from 'papaparse';
 
 // Constants
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_PREVIEW_FIELDS = 5;
+const MAX_PREVIEW_FIELDS = 50; // Limit preview to avoid performance issues with large objects
+const CUSTOM_FILE_PRESET_ID = 'custom-file'; // Special ID for user-uploaded files
+
+/**
+ * Parse CSV text into array of data items
+ * Pure function - no side effects
+ */
+function parseCSVAll(text: string): DataItem[] {
+  if (!text.trim()) {
+    throw new Error('CSV файл пустой');
+  }
+
+  const result = Papa.parse<DataItem>(text, {
+    header: true,
+    skipEmptyLines: 'greedy', // Skip lines that are empty or contain only whitespace
+    transformHeader: (header: string) => header.trim(),
+    transform: (value: string) => value.trim()
+  });
+
+  if (result.errors.length > 0) {
+    const firstError = result.errors[0];
+    throw new Error(`Ошибка парсинга CSV (строка ${firstError.row ?? '?'}): ${firstError.message}`);
+  }
+
+  if (!result.data || result.data.length === 0) {
+    throw new Error('CSV файл должен содержать заголовки и хотя бы одну строку данных');
+  }
+
+  // Filter out rows that have no meaningful data (all values empty)
+  const validData = result.data.filter(row => 
+    Object.values(row).some(value => value !== '' && value !== null && value !== undefined)
+  );
+
+  if (validData.length === 0) {
+    throw new Error('CSV файл не содержит данных (все строки пустые)');
+  }
+
+  return validData;
+}
 
 function App() {
   const [currentData, setCurrentData] = useState<DataItem | null>(null);
@@ -41,15 +79,15 @@ function App() {
     return () => mediaQuery.removeEventListener('change', checkTheme);
   }, []);
 
-  const handlePresetSelect = (preset: Preset) => {
+  const handlePresetSelect = useCallback((preset: Preset) => {
     setSelectedPresetId(preset.id);
     setAllData(preset.data);
-    setCurrentData(preset.data[0]);
+    setCurrentData(preset.data[0] ?? null);
     setFileName('');
     setMessage({ type: null, text: '' });
-  };
+  }, []);
 
-  const handleCategoryChange = (value: string) => {
+  const handleCategoryChange = useCallback((value: string) => {
     setSelectedCategory(value as PresetCategory);
     // Сбрасываем выбор при смене категории
     setSelectedPresetId(null);
@@ -57,20 +95,20 @@ function App() {
     setCurrentData(null);
     setFileName('');
     setMessage({ type: null, text: '' });
-  };
+  }, []);
 
-  const handleFileUploadClick = () => {
+  const handleFileUploadClick = useCallback(() => {
     fileInputRef.current?.click();
-  };
+  }, []);
 
-  const processFile = async (file: File) => {
+  const processFile = useCallback(async (file: File) => {
     // Check file size
     if (file.size > MAX_FILE_SIZE) {
       setMessage({ type: 'error', text: `Файл слишком большой (максимум ${MAX_FILE_SIZE / 1024 / 1024}MB)` });
       return;
     }
 
-    setSelectedPresetId('custom-file');
+    setSelectedPresetId(CUSTOM_FILE_PRESET_ID);
     setFileName(file.name);
     setMessage({ type: null, text: '' });
 
@@ -80,47 +118,60 @@ function App() {
       if (file.name.endsWith('.json')) {
         const parsed = JSON.parse(text);
         if (Array.isArray(parsed)) {
+          if (parsed.length === 0) {
+            setMessage({ type: 'error', text: 'JSON массив пустой' });
+            return;
+          }
           setAllData(parsed);
           setCurrentData(parsed[0]);
-        } else {
+        } else if (typeof parsed === 'object' && parsed !== null) {
           setAllData([parsed]);
           setCurrentData(parsed);
+        } else {
+          setMessage({ type: 'error', text: 'JSON должен содержать объект или массив объектов' });
+          return;
         }
       } else if (file.name.endsWith('.csv')) {
         const parsedArray = parseCSVAll(text);
+        if (parsedArray.length === 0) {
+          setMessage({ type: 'error', text: 'CSV файл пустой или не содержит данных' });
+          return;
+        }
         setAllData(parsedArray);
         setCurrentData(parsedArray[0]);
+      } else {
+        setMessage({ type: 'error', text: 'Поддерживаются только файлы JSON и CSV' });
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       setMessage({ type: 'error', text: `Ошибка чтения файла: ${errorMessage}` });
     }
-  };
+  }, []);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     await processFile(file);
-  };
+  }, [processFile]);
 
-  const handleDragEnter = (e: React.DragEvent) => {
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
-  };
+  }, []);
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-  };
+  }, []);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-  };
+  }, []);
 
-  const handleDrop = async (e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -131,38 +182,19 @@ function App() {
     } else {
       setMessage({ type: 'error', text: 'Поддерживаются только файлы CSV и JSON' });
     }
-  };
+  }, [processFile]);
 
-  const parseCSVAll = (text: string): DataItem[] => {
-    const result = Papa.parse(text, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (header: string) => header.trim(),
-      transform: (value: string) => value.trim()
-    });
-
-    if (result.errors.length > 0) {
-      throw new Error(`Ошибка парсинга CSV: ${result.errors[0].message}`);
-    }
-
-    if (!result.data || result.data.length === 0) {
-      throw new Error('CSV файл должен содержать заголовки и хотя бы одну строку данных');
-    }
-
-    return result.data as DataItem[];
-  };
-
-  const handleFill = () => {
+  const handleFill = useCallback(() => {
     if (currentData) {
       parent.postMessage({ 
         pluginMessage: { 
           type: 'fill-data', 
           data: currentData,
-          allData: allData // Send all data for random selection
+          allData: allData
         } 
       }, 'https://www.figma.com');
     }
-  };
+  }, [currentData, allData]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -182,13 +214,17 @@ function App() {
   }, []);
 
   const hasData = currentData !== null && allData !== null;
-  const dataSourceLabel = fileName || (
-    selectedPresetId && 
-    selectedPresetId !== 'custom-file' && 
-    selectedCategory !== 'file'
-      ? presets[selectedCategory].find(p => p.id === selectedPresetId)?.name 
-      : null
-  );
+  
+  const dataSourceLabel = useMemo(() => {
+    if (fileName) return fileName;
+    if (selectedPresetId && selectedPresetId !== CUSTOM_FILE_PRESET_ID && selectedCategory !== 'file') {
+      const categoryPresets = presets[selectedCategory];
+      if (categoryPresets) {
+        return categoryPresets.find(p => p.id === selectedPresetId)?.name ?? null;
+      }
+    }
+    return null;
+  }, [fileName, selectedPresetId, selectedCategory]);
 
   return (
     <div className="h-screen w-full bg-background flex flex-col relative">
@@ -241,12 +277,12 @@ function App() {
                       ? 'border-primary bg-primary/5 scale-[0.99]' 
                       : 'border-border hover:border-primary/50 hover:bg-accent/50'
                     }
-                    ${selectedPresetId === 'custom-file' ? 'border-primary bg-primary/5' : ''}
+                    ${selectedPresetId === CUSTOM_FILE_PRESET_ID ? 'border-primary bg-primary/5' : ''}
                   `}
                 >
                   <EmptyHeader>
                     <EmptyMedia variant="icon">
-                      <Upload className={isDragging || selectedPresetId === 'custom-file' ? 'text-primary' : ''} />
+                      <Upload className={isDragging || selectedPresetId === CUSTOM_FILE_PRESET_ID ? 'text-primary' : ''} />
                     </EmptyMedia>
                     <EmptyDescription>
                       {isDragging ? 'Отпустите файл' : 'Перетащи CSV или JSON файл сюда или нажми для выбора'}

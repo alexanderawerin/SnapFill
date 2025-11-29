@@ -1,9 +1,18 @@
 // Main plugin code - runs in Figma sandbox
+// NOTE: Types are duplicated here because Figma plugin architecture requires
+// UI (iframe) and plugin code (sandbox) to be separate bundles.
+// Keep in sync with src/types/shared.ts
 
-// Type definitions
+// Type definitions (mirrored from shared.ts)
 type DataItemValue = string | number | boolean | null | undefined;
 interface DataItem {
   [key: string]: DataItemValue;
+}
+
+interface FillDataMessage {
+  type: 'fill-data';
+  data: DataItem;
+  allData: DataItem[] | null;
 }
 
 figma.showUI(__html__, { 
@@ -192,10 +201,11 @@ async function fillNodeWithData(node: SceneNode, data: DataItem) {
       node.characters = stringValue;
     }
     
-    // Handle image fills (URL) - support RECTANGLE, FRAME, and nodes with rounded corners
+    // Handle image fills (URL) - support shapes that can have fills
+    // Note: RECTANGLE in Figma already supports rounded corners via cornerRadius
     else if (typeof value === 'string' && isImageUrl(value)) {
-      if (node.type === 'RECTANGLE' || node.type === 'FRAME' || node.type === 'ELLIPSE' || 
-          (node.type as any) === 'ROUNDED_RECTANGLE') {
+      const fillableTypes = ['RECTANGLE', 'FRAME', 'ELLIPSE', 'POLYGON', 'STAR', 'VECTOR'];
+      if (fillableTypes.includes(node.type)) {
         await fillImageFromUrl(node as GeometryMixin & MinimalFillsMixin, value);
       }
     }

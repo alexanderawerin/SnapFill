@@ -1,10 +1,7 @@
 // Preset types for SnapFill plugin
 
-export type DataItemValue = string | number | boolean | null | undefined;
-
-export interface DataItem {
-  [key: string]: DataItemValue;
-}
+// Re-export shared types for convenience
+export { DataItem, DataItemValue } from '@/types/shared';
 
 export interface Preset {
   id: string;
