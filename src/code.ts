@@ -35,9 +35,9 @@ figma.ui.onmessage = async (msg) => {
         return;
       }
 
-      // Filter only frames and components
+      // Filter only frames, components and instances
       const validFrames = selection.filter(
-        node => node.type === 'FRAME' || node.type === 'COMPONENT'
+        node => node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE'
       );
 
       if (validFrames.length === 0) {
@@ -123,7 +123,7 @@ async function fillFrameWithRandomizedChildren(node: SceneNode, data: DataItem, 
   const childrenByName = new Map<string, SceneNode[]>();
   
   for (const child of node.children) {
-    if (child.type === 'FRAME' || child.type === 'COMPONENT') {
+    if (child.type === 'FRAME' || child.type === 'COMPONENT' || child.type === 'INSTANCE') {
       const name = child.name;
       if (!childrenByName.has(name)) {
         childrenByName.set(name, []);
@@ -140,7 +140,7 @@ async function fillFrameWithRandomizedChildren(node: SceneNode, data: DataItem, 
     const availableData = [...dataArray];
     
     for (const child of node.children) {
-      if (child.type === 'FRAME' || child.type === 'COMPONENT') {
+      if (child.type === 'FRAME' || child.type === 'COMPONENT' || child.type === 'INSTANCE') {
         const childGroup = childrenByName.get(child.name);
         
         // Only randomize if this name appears multiple times
@@ -282,20 +282,10 @@ async function fillImageFromUrl(node: GeometryMixin & MinimalFillsMixin, imageUr
   try {
     const image = await figma.createImageAsync(imageUrl);
     
-    // Preserve existing scaleMode if the node already has an image fill, otherwise use FIT
-    let scaleMode: 'FILL' | 'FIT' | 'CROP' | 'TILE' = 'FIT';
-    
-    if (node.fills && node.fills !== figma.mixed && Array.isArray(node.fills)) {
-      const existingImageFill = node.fills.find(fill => fill.type === 'IMAGE') as ImagePaint | undefined;
-      if (existingImageFill && existingImageFill.scaleMode) {
-        scaleMode = existingImageFill.scaleMode;
-      }
-    }
-    
     const fills: Paint[] = [{
       type: 'IMAGE',
       imageHash: image.hash,
-      scaleMode: scaleMode
+      scaleMode: 'FIT'
     }];
     
     node.fills = fills;
