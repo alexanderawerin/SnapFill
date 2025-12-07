@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 interface PresetCardProps {
   name: string;
   icon: string;
+  description?: string;
   selected?: boolean;
   onClick?: () => void;
   isFileUpload?: boolean;
@@ -25,6 +26,7 @@ const getIconComponent = (iconName: string): LucideIcon => {
 export const PresetCard: React.FC<PresetCardProps> = ({
   name,
   icon,
+  description,
   selected = false,
   onClick,
   isFileUpload = false
@@ -33,12 +35,23 @@ export const PresetCard: React.FC<PresetCardProps> = ({
 
   return (
     <Card
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      aria-label={description ? `${name}: ${description}` : name}
       className={cn(
         'cursor-pointer transition-all hover:bg-accent hover:border-accent-foreground/20 py-6 gap-3',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         selected && 'border-primary bg-accent/50',
         isFileUpload && 'border-dashed'
       )}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
     >
       <CardContent className="flex flex-col items-center justify-center p-0 gap-2">
         <div className="size-10 rounded-lg flex items-center justify-center bg-muted text-foreground">

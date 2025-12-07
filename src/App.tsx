@@ -269,10 +269,20 @@ function App() {
                 onDrop={handleDrop}
               >
                 <Empty 
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Загрузить CSV или JSON файл"
                   onClick={handleFileUploadClick}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleFileUploadClick();
+                    }
+                  }}
                   className={`
                     border-2 border-dashed rounded-lg py-12 min-h-[240px]
                     transition-all cursor-pointer
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
                     ${isDragging 
                       ? 'border-primary bg-primary/5 scale-[0.99]' 
                       : 'border-border hover:border-primary/50 hover:bg-accent/50'
