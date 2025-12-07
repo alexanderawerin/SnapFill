@@ -296,4 +296,3 @@ async function fillImageFromUrl(node: GeometryMixin & MinimalFillsMixin, imageUr
     // Don't show error to avoid cluttering the UI
   }
 }
-
