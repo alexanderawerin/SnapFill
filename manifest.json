@@ -1,5 +1,5 @@
 {
-  "name": "SnapFill",
+  "name": "MDS • SnapFill",
   "id": "snapfill-data-plugin",
   "api": "1.0.0",
   "main": "dist/code.js",
