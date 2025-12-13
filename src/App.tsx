@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Empty, EmptyHeader, EmptyMedia, EmptyDescription } from '@/components/ui/empty';
-import { AlertCircle, LayoutGrid, Table, CheckCircle2, XCircle } from 'lucide-react';
+import { AlertCircle, LayoutGrid, Table, CheckCircle2, XCircle, Copy, Check } from 'lucide-react';
 import { PresetsGrid } from '@/components/PresetsGrid';
 import { presets, Preset, DataItem } from '@/presets';
 import Papa from 'papaparse';
@@ -84,6 +84,7 @@ function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [fillMode, setFillMode] = useState<FillMode>('cards');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [copiedField, setCopiedField] = useState<'matched' | 'unmatched' | null>(null);
   
   // Mapping preview state
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
@@ -237,6 +238,46 @@ function App() {
       }, 'https://www.figma.com');
     }
   }, [currentData, allData, fillMode]);
+
+  const handleCopyFields = useCallback(async (fields: string[], type: 'matched' | 'unmatched') => {
+    const text = fields.join(', ');
+    
+    // Try modern Clipboard API first
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        setCopiedField(type);
+        setTimeout(() => setCopiedField(null), 2000);
+        return;
+      } catch (error) {
+        // Fall through to fallback method
+      }
+    }
+    
+    // Fallback: use old method with temporary textarea
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-999999px';
+      textarea.style.top = '-999999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      
+      if (successful) {
+        setCopiedField(type);
+        setTimeout(() => setCopiedField(null), 2000);
+      } else {
+        throw new Error('execCommand failed');
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Не удалось скопировать в буфер обмена' });
+    }
+  }, [setMessage]);
 
   // Handle messages from plugin
   useEffect(() => {
@@ -419,9 +460,22 @@ function App() {
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium text-foreground">
-                          Будут заполнены ({analysisResult.matched.length})
-                        </p>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <p className="text-[13px] font-medium text-foreground leading-[18px]">
+                            Будут заполнены ({analysisResult.matched.length})
+                          </p>
+                          <button
+                            onClick={() => handleCopyFields(analysisResult.matched, 'matched')}
+                            className="shrink-0 p-1 hover:bg-muted rounded transition-colors"
+                            title="Скопировать список полей"
+                          >
+                            {copiedField === 'matched' ? (
+                              <Check className="h-3.5 w-3.5 text-success" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5 text-foreground/70 hover:text-foreground" />
+                            )}
+                          </button>
+                        </div>
                         <p className="text-[12px] text-muted-foreground truncate">
                           {analysisResult.matched.join(', ')}
                         </p>
@@ -434,9 +488,22 @@ function App() {
                     <div className="flex items-start gap-2">
                       <XCircle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium text-muted-foreground">
-                          Нет слоёв ({analysisResult.unmatched.length})
-                        </p>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <p className="text-[13px] font-medium text-muted-foreground leading-[18px]">
+                            Нет слоёв ({analysisResult.unmatched.length})
+                          </p>
+                          <button
+                            onClick={() => handleCopyFields(analysisResult.unmatched, 'unmatched')}
+                            className="shrink-0 p-1 hover:bg-muted rounded transition-colors"
+                            title="Скопировать список полей"
+                          >
+                            {copiedField === 'unmatched' ? (
+                              <Check className="h-3.5 w-3.5 text-success" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5 text-foreground/70 hover:text-foreground" />
+                            )}
+                          </button>
+                        </div>
                         <p className="text-[12px] text-muted-foreground truncate">
                           {analysisResult.unmatched.join(', ')}
                         </p>
