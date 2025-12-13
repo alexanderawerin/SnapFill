@@ -1,6 +1,14 @@
 import React from 'react';
-import * as Icons from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import {
+  ShoppingCart,
+  Star,
+  MessageCircle,
+  Megaphone,
+  ClipboardList,
+  Package,
+  Box,
+} from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -13,14 +21,19 @@ interface PresetCardProps {
   isFileUpload?: boolean;
 }
 
-// Type-safe icon lookup with fallback
+// Explicit icon mapping to avoid tree-shaking issues
+const iconMap: Record<string, LucideIcon> = {
+  ShoppingCart,
+  Star,
+  MessageCircle,
+  Megaphone,
+  ClipboardList,
+  Package,
+  Box,
+};
+
 const getIconComponent = (iconName: string): LucideIcon => {
-  const icon = Icons[iconName as keyof typeof Icons];
-  // Check if it's a valid React component (LucideIcon)
-  if (icon && typeof icon === 'function') {
-    return icon as LucideIcon;
-  }
-  return Icons.Box;
+  return iconMap[iconName] || Box;
 };
 
 export const PresetCard: React.FC<PresetCardProps> = ({
@@ -40,9 +53,9 @@ export const PresetCard: React.FC<PresetCardProps> = ({
       aria-pressed={selected}
       aria-label={description ? `${name}: ${description}` : name}
       className={cn(
-        'cursor-pointer transition-all hover:bg-accent hover:border-accent-foreground/20 py-6 gap-3',
+        'cursor-pointer transition-all hover:bg-accent hover:border-primary/30 py-4 gap-2',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-        selected && 'border-primary bg-accent/50',
+        selected && 'border-primary bg-primary/5',
         isFileUpload && 'border-dashed'
       )}
       onClick={onClick}
@@ -54,10 +67,10 @@ export const PresetCard: React.FC<PresetCardProps> = ({
       }}
     >
       <CardContent className="flex flex-col items-center justify-center p-0 gap-2">
-        <div className="size-10 rounded-lg flex items-center justify-center bg-muted text-foreground">
-          <IconComponent className="size-6" />
+        <div className="size-10 rounded-lg flex items-center justify-center bg-muted text-muted-foreground">
+          <IconComponent className="size-5" />
         </div>
-        <h3 className="text-sm font-medium text-center leading-tight line-clamp-1 px-2 tracking-[-0.015em]">
+        <h3 className="text-[13px] font-medium text-center leading-tight line-clamp-1 px-2">
           {name}
         </h3>
       </CardContent>

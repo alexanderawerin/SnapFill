@@ -14,7 +14,7 @@ export const PresetsGrid: React.FC<PresetsGridProps> = ({
   onPresetSelect,
 }) => {
   return (
-    <div className="grid grid-cols-2 gap-2 px-4 pb-4">
+    <div className="grid grid-cols-2 gap-2.5 px-4 pb-4">
       {presets.map((preset) => (
         <PresetCard
           key={preset.id}

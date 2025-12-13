@@ -24,7 +24,11 @@ export interface AnalyzeSelectionMessage {
   dataKeys: string[];
 }
 
-export type UIToPluginMessage = FillDataMessage | AnalyzeSelectionMessage;
+export interface GetSelectionMessage {
+  type: 'get-selection';
+}
+
+export type UIToPluginMessage = FillDataMessage | AnalyzeSelectionMessage | GetSelectionMessage;
 
 // Plugin → UI Messages
 export interface SelectionChangedMessage {

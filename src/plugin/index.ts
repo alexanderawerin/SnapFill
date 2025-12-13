@@ -30,6 +30,12 @@ sendSelectionState();
 // ============================================================================
 
 figma.ui.onmessage = async (msg: UIToPluginMessage) => {
+  // Handle get-selection request (UI ready)
+  if (msg.type === 'get-selection') {
+    sendSelectionState();
+    return;
+  }
+  
   // Handle analyze-selection request
   if (msg.type === 'analyze-selection') {
     const result = analyzeMapping(msg.dataKeys);
@@ -39,8 +45,15 @@ figma.ui.onmessage = async (msg: UIToPluginMessage) => {
   
   // Handle fill-data request
   if (msg.type === 'fill-data') {
+    console.log('[SnapFill] Received fill-data message');
+    console.log('[SnapFill] fillMode:', msg.fillMode);
+    console.log('[SnapFill] allData length:', msg.allData?.length);
+    console.log('[SnapFill] data keys:', msg.data ? Object.keys(msg.data) : 'none');
+    
     try {
       const validFrames = getValidFrames();
+      console.log('[SnapFill] Valid frames:', validFrames.length);
+      validFrames.forEach(f => console.log(`[SnapFill]   - "${f.name}" (${f.type})`));
       
       if (validFrames.length === 0) {
         const error: ErrorMessage = { 
@@ -54,6 +67,7 @@ figma.ui.onmessage = async (msg: UIToPluginMessage) => {
       // All changes within this handler are automatically grouped for undo
       if (msg.allData && Array.isArray(msg.allData) && msg.allData.length > 0) {
         const fillMode = msg.fillMode || 'cards';
+        console.log('[SnapFill] Using fillMode:', fillMode);
         
         if (fillMode === 'table') {
           await fillTableWithRandomData(validFrames, msg.allData);
@@ -76,7 +90,9 @@ figma.ui.onmessage = async (msg: UIToPluginMessage) => {
         };
         figma.ui.postMessage(success);
       }
+      console.log('[SnapFill] Fill completed successfully');
     } catch (error) {
+      console.error('[SnapFill] Fill error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
       const errorMsg: ErrorMessage = { 
         type: 'error', 

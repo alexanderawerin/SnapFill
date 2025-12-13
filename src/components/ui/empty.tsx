@@ -7,7 +7,7 @@ function Empty({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="empty"
       className={cn(
-        "flex min-w-0 flex-1 flex-col items-center justify-center gap-6 rounded-lg border-dashed p-6 text-center text-balance md:p-12",
+        "flex min-w-0 flex-1 flex-col items-center justify-center gap-3 rounded-xl bg-selection-bg p-6 text-center text-balance transition-all duration-200",
         className
       )}
       {...props}
@@ -29,12 +29,12 @@ function EmptyHeader({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const emptyMediaVariants = cva(
-  "flex shrink-0 items-center justify-center mb-2 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "flex shrink-0 items-center justify-center [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-transparent",
-        icon: "bg-muted text-foreground flex size-10 shrink-0 items-center justify-center rounded-lg [&_svg:not([class*='size-'])]:size-6",
+        default: "bg-transparent [&_svg]:size-10 [&_svg]:stroke-[#949494]",
+        icon: "bg-transparent text-muted-foreground flex size-10 shrink-0 items-center justify-center [&_svg:not([class*='size-'])]:size-10",
       },
     },
     defaultVariants: {
@@ -73,7 +73,7 @@ function EmptyDescription({ className, ...props }: React.ComponentProps<"p">) {
     <div
       data-slot="empty-description"
       className={cn(
-        "text-muted-foreground [&>a:hover]:text-primary text-sm/snug [&>a]:underline [&>a]:underline-offset-4",
+        "text-[#6A6868] dark:text-muted-foreground [&>a:hover]:text-primary text-sm leading-[18px] text-center [&>a]:underline [&>a]:underline-offset-4",
         className
       )}
       {...props}

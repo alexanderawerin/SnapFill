@@ -1,44 +1,71 @@
-// Export all presets
-import { PresetsByCategory } from './types';
+import { Preset } from './types';
+import {
+  productsData,
+  reviewsData,
+  messagesData,
+  promotionData,
+  ordersData,
+  suppliesData
+} from './data';
 
-// B2B presets
-import { catalogPreset } from './b2b/catalog';
-import { pricesPreset } from './b2b/prices';
-import { boostSalesPreset } from './b2b/boost-sales';
-import { boostImpressionsPreset } from './b2b/boost-impressions';
-import { shelvesPreset } from './b2b/shelves';
-import { reachPromotionPreset } from './b2b/reach-promotion';
-import { reviewsForPointsPreset } from './b2b/reviews-for-points';
-import { ordersPreset as b2bOrdersPreset } from './b2b/orders';
+// Preset definitions
+const productsPreset: Preset = {
+  id: 'products',
+  name: 'Товары',
+  icon: 'ShoppingCart',
+  description: 'Карточки товаров маркетплейса',
+  data: productsData
+};
 
-// B2C presets
-import { productListPreset } from './b2c/product-list';
-import { productDetailsPreset } from './b2c/product-details';
-import { reviewsPreset } from './b2c/reviews';
-import { usersPreset } from './b2c/users';
-import { wishlistPreset } from './b2c/wishlist';
-import { ordersPreset as b2cOrdersPreset } from './b2c/orders';
+const reviewsPreset: Preset = {
+  id: 'reviews',
+  name: 'Отзывы',
+  icon: 'Star',
+  description: 'Отзывы покупателей с оценками',
+  data: reviewsData
+};
 
-export const presets: PresetsByCategory = {
-  b2b: [
-    catalogPreset,
-    pricesPreset,
-    boostSalesPreset,
-    boostImpressionsPreset,
-    shelvesPreset,
-    reachPromotionPreset,
-    reviewsForPointsPreset,
-    b2bOrdersPreset
-  ],
-  b2c: [
-    productListPreset,
-    productDetailsPreset,
-    wishlistPreset,
-    b2cOrdersPreset,
+const messagesPreset: Preset = {
+  id: 'messages',
+  name: 'Сообщения',
+  icon: 'MessageCircle',
+  description: 'Сообщения и уведомления',
+  data: messagesData
+};
+
+const promotionPreset: Preset = {
+  id: 'promotion',
+  name: 'Реклама и продвижение',
+  icon: 'Megaphone',
+  description: 'Рекламные кампании и продвижение',
+  data: promotionData
+};
+
+const ordersPreset: Preset = {
+  id: 'orders',
+  name: 'Заказы и отгрузки',
+  icon: 'ClipboardList',
+  description: 'Заказы и отгрузки товаров',
+  data: ordersData
+};
+
+const suppliesPreset: Preset = {
+  id: 'supplies',
+  name: 'Поставки',
+  icon: 'Package',
+  description: 'Поставки и приёмка товаров',
+  data: suppliesData
+};
+
+export const presets = {
+  all: [
+    productsPreset,
     reviewsPreset,
-    usersPreset
+    messagesPreset,
+    promotionPreset,
+    ordersPreset,
+    suppliesPreset
   ]
 };
 
 export * from './types';
-
