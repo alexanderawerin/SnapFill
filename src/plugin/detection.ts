@@ -100,6 +100,31 @@ export function discoverCards(
   if (cardLevel === -1) {
     console.log(`[SnapFill] No optimal card level found, trying fallback strategies...`);
 
+    // Check if rootNode itself is a single card (INSTANCE/COMPONENT)
+    // In this case, treat all fields as belonging to this one card
+    const rootIsCard = rootNode.type === 'INSTANCE' || rootNode.type === 'COMPONENT';
+    if (rootIsCard) {
+      console.log(`[SnapFill] Root "${rootNode.name}" is ${rootNode.type} - treating as single card`);
+      const fields = new Map<string, SceneNode>();
+      for (const f of fieldNodes) {
+        fields.set(f.fieldName, f.node);
+      }
+      console.log(`[SnapFill] Single card created with ${fields.size} fields: ${Array.from(fields.keys()).join(', ')}`);
+      return [{ container: rootNode, fields }];
+    }
+
+    // Check if all fields have unique names - if so, it's likely a single card
+    const uniqueFieldNames = new Set(fieldNodes.map(f => f.fieldName));
+    if (uniqueFieldNames.size === fieldNodes.length) {
+      console.log(`[SnapFill] All ${fieldNodes.length} fields have unique names - treating as single card`);
+      const fields = new Map<string, SceneNode>();
+      for (const f of fieldNodes) {
+        fields.set(f.fieldName, f.node);
+      }
+      console.log(`[SnapFill] Single card created with ${fields.size} fields: ${Array.from(fields.keys()).join(', ')}`);
+      return [{ container: rootNode, fields }];
+    }
+
     // Fallback 1: Try to find component/instance boundaries
     const componentLevel = findComponentLevel(fieldNodes);
     if (componentLevel !== -1) {
