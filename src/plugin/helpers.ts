@@ -67,45 +67,31 @@ export function isImageUrl(str: string): boolean {
 
 /**
  * Fill node with image from URL
- * Tries multiple strategies to load the image:
- * 1. Direct URL
- * 2. CORS proxy (for CORS issues)
- * 3. Fallback to placeholder
+ * Note: Yandex CDN (avatars.mds.yandex.net) supports CORS natively,
+ * so no proxy is needed for our images.
  */
 export async function fillImageFromUrl(
   node: GeometryMixin & MinimalFillsMixin,
   imageUrl: string
 ): Promise<void> {
-  const strategies = [
-    { name: 'Direct URL', url: imageUrl },
-    { name: 'CORS Proxy', url: `https://corsproxy.io/?${encodeURIComponent(imageUrl)}` },
-  ];
+  try {
+    console.log(`[SnapFill] Loading image from: ${imageUrl}`);
+    const image = await figma.createImageAsync(imageUrl);
+    console.log(`[SnapFill] ✓ Image loaded successfully: ${image.hash}`);
 
-  for (const strategy of strategies) {
-    try {
-      console.log(`[SnapFill] Trying strategy: ${strategy.name} for ${imageUrl}`);
-      const image = await figma.createImageAsync(strategy.url);
-      console.log(`[SnapFill] ✓ Image loaded with ${strategy.name}: ${image.hash}`);
+    const fills: Paint[] = [{
+      type: 'IMAGE',
+      imageHash: image.hash,
+      scaleMode: 'FIT'
+    }];
 
-      const fills: Paint[] = [{
-        type: 'IMAGE',
-        imageHash: image.hash,
-        scaleMode: 'FIT'
-      }];
-
-      node.fills = fills;
-      console.log(`[SnapFill] ✓ Image applied successfully`);
-      return; // Success, exit function
-    } catch (error) {
-      console.warn(`[SnapFill] ✗ ${strategy.name} failed:`, error);
-      // Continue to next strategy
-    }
+    node.fills = fills;
+    console.log(`[SnapFill] ✓ Image applied successfully`);
+  } catch (error) {
+    console.error(`[SnapFill] ✗ Failed to load image from ${imageUrl}:`, error);
+    figma.notify(`⚠️ Не удалось загрузить изображение: ${imageUrl.substring(0, 50)}...`, {
+      error: true,
+      timeout: 3000
+    });
   }
-
-  // All strategies failed
-  console.error(`[SnapFill] ✗ All strategies failed for ${imageUrl}`);
-  figma.notify(`⚠️ Не удалось загрузить изображение: ${imageUrl.substring(0, 50)}...`, {
-    error: true,
-    timeout: 3000
-  });
 }
