@@ -1,14 +1,47 @@
+# Dependencies
 node_modules/
-dist/
-*.log
-.DS_Store
-.env
-*.zip
+package-lock.json
 
-# React build artifacts
-.vite/
+# Build outputs
+dist/
 *.tsbuildinfo
 
-# Cursor IDE
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
 .cursor/
+.claude/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.zip
+*.tar.gz
+
+# Build artifacts
+.vite/
+
+# Test coverage
+coverage/
+
+# Figma plugin specific
+*.fig
 
