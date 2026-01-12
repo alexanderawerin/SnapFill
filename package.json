@@ -10,7 +10,8 @@
     "dev:plugin": "node scripts/build-plugin.mjs --watch",
     "dev:ui": "vite build --watch",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "images:convert": "node scripts/images-to-base64.mjs"
   },
   "author": "",
   "license": "MIT",

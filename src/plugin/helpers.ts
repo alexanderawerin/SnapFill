@@ -67,22 +67,45 @@ export function isImageUrl(str: string): boolean {
 
 /**
  * Fill node with image from URL
+ * Tries multiple strategies to load the image:
+ * 1. Direct URL
+ * 2. CORS proxy (for CORS issues)
+ * 3. Fallback to placeholder
  */
 export async function fillImageFromUrl(
-  node: GeometryMixin & MinimalFillsMixin, 
+  node: GeometryMixin & MinimalFillsMixin,
   imageUrl: string
 ): Promise<void> {
-  try {
-    const image = await figma.createImageAsync(imageUrl);
-    
-    const fills: Paint[] = [{
-      type: 'IMAGE',
-      imageHash: image.hash,
-      scaleMode: 'FIT'
-    }];
-    
-    node.fills = fills;
-  } catch (_error) {
-    // Silently fail - images from some CDNs might not load
+  const strategies = [
+    { name: 'Direct URL', url: imageUrl },
+    { name: 'CORS Proxy', url: `https://corsproxy.io/?${encodeURIComponent(imageUrl)}` },
+  ];
+
+  for (const strategy of strategies) {
+    try {
+      console.log(`[SnapFill] Trying strategy: ${strategy.name} for ${imageUrl}`);
+      const image = await figma.createImageAsync(strategy.url);
+      console.log(`[SnapFill] ✓ Image loaded with ${strategy.name}: ${image.hash}`);
+
+      const fills: Paint[] = [{
+        type: 'IMAGE',
+        imageHash: image.hash,
+        scaleMode: 'FIT'
+      }];
+
+      node.fills = fills;
+      console.log(`[SnapFill] ✓ Image applied successfully`);
+      return; // Success, exit function
+    } catch (error) {
+      console.warn(`[SnapFill] ✗ ${strategy.name} failed:`, error);
+      // Continue to next strategy
+    }
   }
+
+  // All strategies failed
+  console.error(`[SnapFill] ✗ All strategies failed for ${imageUrl}`);
+  figma.notify(`⚠️ Не удалось загрузить изображение: ${imageUrl.substring(0, 50)}...`, {
+    error: true,
+    timeout: 3000
+  });
 }
