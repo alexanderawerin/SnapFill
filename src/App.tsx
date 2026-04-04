@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, type ChangeEvent, type DragEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -67,10 +67,7 @@ const FileIcon = () => (
 );
 
 function App() {
-  // Frame selection state
   const [frameSelected, setFrameSelected] = useState(false);
-  const [_frameName, setFrameName] = useState<string>('');
-  const [_frameCount, setFrameCount] = useState(0);
   
   // Data state
   const [currentData, setCurrentData] = useState<DataItem | null>(null);
@@ -164,11 +161,22 @@ function App() {
             setMessage({ type: 'error', text: 'JSON массив пустой' });
             return;
           }
-          setAllData(parsed);
-          setCurrentData(parsed[0]);
+          if (parsed.length > 10000) {
+            setMessage({ type: 'error', text: 'Слишком много записей (максимум 10 000)' });
+            return;
+          }
+          const valid = parsed.every(
+            (item: unknown) => typeof item === 'object' && item !== null && !Array.isArray(item)
+          );
+          if (!valid) {
+            setMessage({ type: 'error', text: 'JSON массив должен содержать только объекты' });
+            return;
+          }
+          setAllData(parsed as DataItem[]);
+          setCurrentData(parsed[0] as DataItem);
         } else if (typeof parsed === 'object' && parsed !== null) {
-          setAllData([parsed]);
-          setCurrentData(parsed);
+          setAllData([parsed as DataItem]);
+          setCurrentData(parsed as DataItem);
         } else {
           setMessage({ type: 'error', text: 'JSON должен содержать объект или массив объектов' });
           return;
@@ -190,30 +198,30 @@ function App() {
     }
   }, []);
 
-  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     await processFile(file);
   }, [processFile]);
 
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
+  const handleDragEnter = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
   }, []);
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
   }, []);
 
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -287,12 +295,7 @@ function App() {
       
       if (msg.type === 'selection-changed') {
         setFrameSelected(msg.frameSelected);
-        if (msg.frameSelected) {
-          setFrameName(msg.frameName || '');
-          setFrameCount(msg.frameCount || 1);
-        } else {
-          setFrameName('');
-          setFrameCount(0);
+        if (!msg.frameSelected) {
           setAnalysisResult(null);
         }
       } else if (msg.type === 'analysis-result') {

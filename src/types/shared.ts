@@ -38,10 +38,16 @@ export interface AnalyzeSelectionMessage {
   dataKeys: string[];
 }
 
+/** Request current selection state */
+export interface GetSelectionMessage {
+  type: 'get-selection';
+}
+
 /** All possible messages from UI to Plugin */
 export type UIToPluginMessage = 
   | FillDataMessage
-  | AnalyzeSelectionMessage;
+  | AnalyzeSelectionMessage
+  | GetSelectionMessage;
 
 // ============================================================================
 // Plugin → UI Messages
@@ -94,26 +100,3 @@ export type PluginToUIMessage =
   | ErrorMessage
   | SuccessMessage;
 
-// ============================================================================
-// Type Guards
-// ============================================================================
-
-export function isSelectionChanged(msg: PluginToUIMessage): msg is SelectionChangedMessage {
-  return msg.type === 'selection-changed';
-}
-
-export function isAnalysisResult(msg: PluginToUIMessage): msg is AnalysisResultMessage {
-  return msg.type === 'analysis-result';
-}
-
-export function isProgress(msg: PluginToUIMessage): msg is ProgressMessage {
-  return msg.type === 'progress';
-}
-
-export function isError(msg: PluginToUIMessage): msg is ErrorMessage {
-  return msg.type === 'error';
-}
-
-export function isSuccess(msg: PluginToUIMessage): msg is SuccessMessage {
-  return msg.type === 'success';
-}

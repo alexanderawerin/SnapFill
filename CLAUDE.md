@@ -57,7 +57,7 @@ npm run images:convert # Конвертация изображений в base64
 ## Tech Stack
 
 - TypeScript 5.3, React 18, TailwindCSS 4.1, shadcn/ui + Radix
-- Figma Plugin API 1.0.0
+- @figma/plugin-typings ^1.90.0
 - PapaParse (CSV), esbuild + Vite
 
 ## Important Notes

@@ -1,4 +1,4 @@
-import React from 'react';
+import type { FC } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   ShoppingCart,
@@ -18,7 +18,6 @@ interface PresetCardProps {
   description?: string;
   selected?: boolean;
   onClick?: () => void;
-  isFileUpload?: boolean;
 }
 
 // Explicit icon mapping to avoid tree-shaking issues
@@ -36,13 +35,12 @@ const getIconComponent = (iconName: string): LucideIcon => {
   return iconMap[iconName] || Box;
 };
 
-export const PresetCard: React.FC<PresetCardProps> = ({
+export const PresetCard: FC<PresetCardProps> = ({
   name,
   icon,
   description,
   selected = false,
   onClick,
-  isFileUpload = false
 }) => {
   const IconComponent = getIconComponent(icon);
 
@@ -55,8 +53,7 @@ export const PresetCard: React.FC<PresetCardProps> = ({
       className={cn(
         'cursor-pointer transition-all hover:bg-accent hover:border-primary/30 py-4 gap-2',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-        selected && 'border-primary bg-primary/5',
-        isFileUpload && 'border-dashed'
+        selected && 'border-primary bg-primary/5'
       )}
       onClick={onClick}
       onKeyDown={(e) => {

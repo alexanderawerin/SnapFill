@@ -18,32 +18,19 @@ export async function fillMultipleFramesWithRandomData(
   frames: SceneNode[], 
   dataArray: DataItem[]
 ): Promise<void> {
-  console.log(`[SnapFill] fillMultipleFramesWithRandomData: ${frames.length} frames, ${dataArray.length} data items`);
-  
-  // Get all field names from the data
   const fieldNames = new Set<string>();
   for (const item of dataArray) {
     for (const key of Object.keys(item)) {
       fieldNames.add(key);
     }
   }
-  console.log(`[SnapFill] Looking for fields: ${Array.from(fieldNames).join(', ')}`);
   
   for (const frame of frames) {
-    // Step 1: Find all field nodes (bottom-up)
     const fieldNodes = findFieldNodes(frame, fieldNames);
-    console.log(`[SnapFill] Found ${fieldNodes.length} field nodes in "${frame.name}"`);
+    if (fieldNodes.length === 0) continue;
     
-    if (fieldNodes.length === 0) {
-      console.log(`[SnapFill] No matching fields in "${frame.name}", skipping`);
-      continue;
-    }
-    
-    // Step 2: Discover cards from field nodes
     const cards = discoverCards(frame, fieldNodes);
-    console.log(`[SnapFill] Discovered ${cards.length} cards`);
     
-    // Step 3: Fill each card with unique random data
     const availableData = [...dataArray];
     for (const card of cards) {
       const cardData = getRandomDataItem(availableData, dataArray);
@@ -56,13 +43,9 @@ export async function fillMultipleFramesWithRandomData(
  * Fills a card's fields with data
  */
 async function fillCard(card: Card, data: DataItem): Promise<void> {
-  console.log(`[SnapFill] Filling card "${card.container.name}" with ${card.fields.size} fields`);
-  
   for (const [fieldName, node] of card.fields) {
     const value = data[fieldName];
     if (value === null || value === undefined) continue;
-    
-    console.log(`[SnapFill]   → ${fieldName}: "${String(value).substring(0, 30)}..."`);
     await fillFieldNode(node, value);
   }
 }
@@ -104,7 +87,8 @@ async function fillFieldNode(node: SceneNode, value: string | number | boolean):
 
 /**
  * Fills table with random data (Table mode)
- * Synchronizes data across columns: Cell[i] in every column gets the SAME random data
+ * Synchronizes data across columns: Cell[i] in every column gets the SAME random data.
+ * Falls back to recursive name-based fill when no table structure is detected.
  */
 export async function fillTableWithRandomData(
   frames: SceneNode[], 
@@ -156,16 +140,10 @@ export async function fillTableWithRandomData(
  * Recursively fills frame with data based on layer names
  */
 export async function fillFrameWithData(node: SceneNode, data: DataItem): Promise<void> {
-  console.log(`[SnapFill] fillFrameWithData: "${node.name}" (${node.type})`);
-  console.log(`[SnapFill] Data keys: ${Object.keys(data).join(', ')}`);
-  
   if ('children' in node) {
-    console.log(`[SnapFill] Processing ${node.children.length} children`);
     for (const child of node.children) {
       await fillNodeWithData(child, data);
     }
-  } else {
-    console.log(`[SnapFill] Node has no children`);
   }
 }
 
@@ -174,47 +152,33 @@ export async function fillFrameWithData(node: SceneNode, data: DataItem): Promis
  */
 async function fillNodeWithData(node: SceneNode, data: DataItem): Promise<void> {
   const nodeName = node.name;
-  
-  // Log every node being visited (for debugging)
   const hasMatch = Object.prototype.hasOwnProperty.call(data, nodeName);
+  
   if (hasMatch) {
     const value = data[nodeName];
-    console.log(`[SnapFill] ✓ MATCH: "${nodeName}" (${node.type}) = "${String(value).substring(0, 50)}..."`);
     
-    // Handle text nodes directly
     if (node.type === 'TEXT' && value !== null && value !== undefined) {
-      console.log(`[SnapFill]   → Filling TEXT node`);
       await fillTextNode(node, String(value));
-      return; // Don't recurse into filled text nodes
+      return;
     }
     
-    // Handle image fills on shapes
     if (typeof value === 'string' && isImageUrl(value)) {
       const fillableTypes = ['RECTANGLE', 'FRAME', 'ELLIPSE', 'POLYGON', 'STAR', 'VECTOR'];
       if (fillableTypes.includes(node.type)) {
-        console.log(`[SnapFill]   → Filling IMAGE`);
         await fillImageFromUrl(node as GeometryMixin & MinimalFillsMixin, value);
         return;
-      } else {
-        console.log(`[SnapFill]   → Skipping: node type ${node.type} not in fillable types`);
       }
     }
     
-    // If it's a container (FRAME/INSTANCE/GROUP) with matching name but not TEXT,
-    // try to find the first text node inside and fill it
     if ('children' in node && value !== null && value !== undefined && !isImageUrl(String(value))) {
       const textNode = findFirstTextNode(node);
       if (textNode) {
-        console.log(`[SnapFill]   → Found text inside container, filling child TEXT "${textNode.name}"`);
         await fillTextNode(textNode, String(value));
-        return; // Don't recurse - we've handled this container
-      } else {
-        console.log(`[SnapFill]   → Container has no text node inside`);
+        return;
       }
     }
   }
   
-  // Recurse into children for containers
   if ('children' in node) {
     for (const child of node.children) {
       await fillNodeWithData(child, data);
@@ -239,22 +203,33 @@ function findFirstTextNode(node: SceneNode & { children: readonly SceneNode[] })
 }
 
 /**
- * Fills a text node with string value
+ * Fills a text node with string value.
+ * For mixed-font nodes, loads all unique fonts used across character ranges
+ * before replacing text, so Figma doesn't reject the assignment.
  */
 async function fillTextNode(node: TextNode, value: string): Promise<void> {
-  console.log(`[SnapFill] fillTextNode: "${node.name}" <- "${value.substring(0, 50)}..."`);
   try {
     if (node.fontName !== figma.mixed) {
       await figma.loadFontAsync(node.fontName as FontName);
     } else if (node.characters.length > 0) {
-      const firstCharFont = node.getRangeFontName(0, 1) as FontName;
-      await figma.loadFontAsync(firstCharFont);
+      const fontsToLoad = new Set<string>();
+      const fontNames: FontName[] = [];
+      for (let i = 0; i < node.characters.length; i++) {
+        const font = node.getRangeFontName(i, i + 1) as FontName;
+        const key = `${font.family}::${font.style}`;
+        if (!fontsToLoad.has(key)) {
+          fontsToLoad.add(key);
+          fontNames.push(font);
+        }
+      }
+      await Promise.all(fontNames.map(f => figma.loadFontAsync(f)));
     } else {
       await loadFallbackFont();
     }
     node.characters = value;
-    console.log(`[SnapFill] fillTextNode: SUCCESS`);
   } catch (err) {
-    console.error(`[SnapFill] fillTextNode ERROR:`, err);
+    const label = node.name || 'unknown';
+    const detail = err instanceof Error ? err.message : String(err);
+    figma.notify(`Не удалось заполнить «${label}»: ${detail}`, { error: true, timeout: 4000 });
   }
 }
