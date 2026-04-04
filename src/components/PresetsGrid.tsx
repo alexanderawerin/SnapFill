@@ -1,4 +1,4 @@
-import React from 'react';
+import type { FC } from 'react';
 import { Preset } from '@/presets/types';
 import { PresetCard } from './PresetCard';
 
@@ -8,7 +8,7 @@ interface PresetsGridProps {
   onPresetSelect: (preset: Preset) => void;
 }
 
-export const PresetsGrid: React.FC<PresetsGridProps> = ({
+export const PresetsGrid: FC<PresetsGridProps> = ({
   presets,
   selectedPresetId,
   onPresetSelect,

@@ -46,6 +46,12 @@ export interface AnalysisResultMessage {
   totalLayers: number;
 }
 
+export interface ProgressMessage {
+  type: 'progress';
+  current: number;
+  total: number;
+}
+
 export interface ErrorMessage {
   type: 'error';
   message: string;
@@ -59,5 +65,6 @@ export interface SuccessMessage {
 export type PluginToUIMessage = 
   | SelectionChangedMessage 
   | AnalysisResultMessage 
+  | ProgressMessage
   | ErrorMessage 
   | SuccessMessage;

@@ -49,16 +49,14 @@ export function isImageUrl(str: string): boolean {
   const imagePatterns = [
     /images\.unsplash\.com/i,
     /cdn.*\.com.*\.(jpg|jpeg|png|gif|webp|svg)/i,
-    /\/image\//i,
-    /\/img\//i,
-    /\/images\//i,
-    /\/assets\//i,
+    /\/image\/.*\.(jpg|jpeg|png|gif|webp|svg)/i,
+    /\/img\/.*\.(jpg|jpeg|png|gif|webp|svg)/i,
+    /\/images\/.*\.(jpg|jpeg|png|gif|webp|svg)/i,
     /is\/image/i,
     /fmt=(jpg|jpeg|png|webp|gif)/i,
-    /\.cdn\./i,
     /storeimages\.cdn/i,
     /avatars\.mds/i,
-    /assetsadobe/i,
+    /assetsadobe.*\.(jpg|jpeg|png|gif|webp|svg)/i,
     /i\.pravatar\.cc/i,
   ];
   
@@ -75,9 +73,7 @@ export async function fillImageFromUrl(
   imageUrl: string
 ): Promise<void> {
   try {
-    console.log(`[SnapFill] Loading image from: ${imageUrl}`);
     const image = await figma.createImageAsync(imageUrl);
-    console.log(`[SnapFill] ✓ Image loaded successfully: ${image.hash}`);
 
     const fills: Paint[] = [{
       type: 'IMAGE',
@@ -86,9 +82,7 @@ export async function fillImageFromUrl(
     }];
 
     node.fills = fills;
-    console.log(`[SnapFill] ✓ Image applied successfully`);
   } catch (error) {
-    console.error(`[SnapFill] ✗ Failed to load image from ${imageUrl}:`, error);
     figma.notify(`⚠️ Не удалось загрузить изображение: ${imageUrl.substring(0, 50)}...`, {
       error: true,
       timeout: 3000
