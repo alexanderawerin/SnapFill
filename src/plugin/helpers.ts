@@ -1,5 +1,52 @@
 import { DataItem } from './types';
 
+// ============================================================================
+// Name Normalization
+// ============================================================================
+
+export function normalizeName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/**
+ * Maps normalized layer names to original data keys.
+ * Exact-case match takes priority over normalized match when
+ * multiple data keys normalize to the same string.
+ */
+export class NormalizedNameMap {
+  private exact: Set<string>;
+  private normalized: Map<string, string>; // normalized -> original key
+
+  constructor(fieldNames: Set<string> | string[]) {
+    const names = fieldNames instanceof Set ? fieldNames : new Set(fieldNames);
+    this.exact = names;
+    this.normalized = new Map();
+
+    for (const name of names) {
+      const norm = normalizeName(name);
+      // Don't overwrite if another key already maps to this normalized form —
+      // exact match will handle disambiguation at lookup time
+      if (!this.normalized.has(norm)) {
+        this.normalized.set(norm, name);
+      }
+    }
+  }
+
+  match(nodeName: string): string | null {
+    // Exact match first
+    if (this.exact.has(nodeName)) {
+      return nodeName;
+    }
+    // Normalized fallback
+    const norm = normalizeName(nodeName);
+    return this.normalized.get(norm) ?? null;
+  }
+}
+
+// ============================================================================
+// Data Helpers
+// ============================================================================
+
 /**
  * Get random data item from array without repetition
  */
