@@ -395,19 +395,28 @@ export function findTableColumns(node: SceneNode): TableColumn[] {
 }
 
 /**
- * Extracts cells from a column (all containers except first, assumed to be header)
+ * Extracts cells from a column (all containers except first, assumed to be header).
+ * Recurses through single-container wrappers (e.g. Separator → Column → Cells)
+ * to handle component-based table structures where columns are wrapped in instances.
  */
 function extractCellsFromColumn(column: SceneNode): SceneNode[] {
   const children = getChildren(column);
-  if (children.length < 2) return [];
-  
   const containers: SceneNode[] = [];
   for (const child of children) {
     if (isContainer(child)) {
       containers.push(child);
     }
   }
-  
-  if (containers.length < 2) return [];
-  return containers.slice(1);
+
+  if (containers.length >= 2) {
+    return containers.slice(1);
+  }
+
+  // Single container child: pass through wrapper instances/frames
+  // (e.g. bui_Data Table / Column / Separator wraps a single bui_Data Table / Column)
+  if (containers.length === 1) {
+    return extractCellsFromColumn(containers[0]);
+  }
+
+  return [];
 }
