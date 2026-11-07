@@ -29,8 +29,8 @@
 
 ```bash
 # 1. Клонируйте репозиторий
-git clone https://github.com/yourusername/mds-snapfill.git
-cd mds-snapfill
+git clone https://github.com/alexanderawerin/SnapFill.git
+cd SnapFill
 
 # 2. Установите зависимости
 npm install
@@ -159,17 +159,17 @@ npm run typecheck
 ### Структура проекта
 
 ```
-mds-snapfill/
+SnapFill/
 ├── src/
-│   ├── code.ts              # Точка входа плагина (Figma API)
 │   ├── App.tsx              # React компонент UI
 │   ├── main.tsx             # Точка входа React
 │   ├── plugin/              # Логика плагина
+│   │   ├── index.ts         # Точка входа плагина (Figma API)
 │   │   ├── fill.ts          # Заполнение данных
 │   │   ├── detection.ts     # Детекция карточек
 │   │   └── helpers.ts       # Утилиты (загрузка изображений)
 │   ├── presets/             # Встроенные пресеты данных
-│   │   ├── data/            # JSON файлы с данными
+│   │   ├── data/            # TypeScript-модули с данными
 │   │   └── types.ts         # TypeScript типы
 │   └── components/          # UI компоненты
 ├── docs/                    # Документация
@@ -204,7 +204,7 @@ mds-snapfill/
 ### B2B категория
 - **Products** — товары для маркетплейса
 - **Orders** — заказы и статусы
-- **Analytics** — метрики и статистика
+- **Supplies** — поставки и приёмка товаров
 
 ### B2C категория
 - **Messages** — чаты и сообщения
@@ -273,7 +273,7 @@ mds-snapfill/
 
 1. Проверьте [документацию](./docs/INDEX.md)
 2. Посмотрите [решение проблем](./docs/FINAL_SOLUTION_SUMMARY.md)
-3. Создайте [Issue](https://github.com/yourusername/mds-snapfill/issues)
+3. Создайте [Issue](https://github.com/alexanderawerin/SnapFill/issues)
 
 ---
 
